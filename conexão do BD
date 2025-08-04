@@ -1,0 +1,16 @@
+import mysql.connector
+from mysql.connector import Error
+
+
+
+conexao = mysql.connector.connect(
+        host='127.0.0.1',
+        user='estudamais',
+        password='2005Pjl$',
+        database=' estudamais'
+    )
+cursor = conexao.cursor() 
+
+
+curso.close()
+conexao.close()

@@ -1,0 +1,57 @@
+from senha import API_KEY
+import requests
+from flask import Flask, jsonify
+import json
+from openai import OpenAI    
+
+
+
+
+client = OpenAI(api_key=API_KEY)
+app = Flask(__name__)
+
+body_menssagens = {
+   "model": "gpt-5",
+   "messages": [
+        {
+             "role": "user",
+             "content": "Write a one-sentence bedtime story about a unicorn."
+        }
+    ]
+}
+
+body_menssagens = json.dumps(body_menssagens)
+
+@app.route("/")
+def home():
+    return "API funcionando. Acesse /openai para ver os modelos ou /story para ver uma resposta da IA."
+
+@app.route("/openai")
+def listar_modelos_openai():
+    url = "https://api.openai.com/v1/models"
+    headers = {
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json"
+    }
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        return jsonify(response.json())
+    else:
+        return jsonify({"erro": "Não foi possível acessar a API da OpenAI", "status": response.status_code})
+
+@app.route("/perguntar", methods=["POST"])
+def perguntar():
+    data = requests.get_json()
+    pergunta = data.get("mensagem", "")
+
+    completion = client.chat.completions.create(
+        model="gpt-5",
+        messages=[
+            {"role": "user", "content": pergunta}
+        ]
+    )
+
+    resposta = completion.choices[0].message.content
+    return jsonify({"resposta": resposta})
+if __name__ == "__main__":
+    app.run(debug=True)

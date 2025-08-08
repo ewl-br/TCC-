@@ -1,0 +1,22 @@
+from senha import API_KEY
+from flask import Flask, jsonify
+from openai import OpenAI
+
+client = OpenAI(api_key=API_KEY)
+app = Flask(__name__)
+
+@app.route("/")
+def home():
+    return "API funcionando. Acesse /story para ver a historinha do unicórnio."
+
+@app.route("/story")
+def story():
+    completion = client.chat.completions.create(
+        model="gpt-4.1",
+        messages=[{"role": "user", "content": "Write a one-sentence bedtime story about a unicorn."}]
+    )
+    resposta = completion.choices[0].message.content
+    return jsonify({"story": resposta})
+
+if __name__ == "__main__":
+    app.run(debug=True, port=8080)

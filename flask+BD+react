@@ -1,0 +1,65 @@
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+import mysql.connector
+from openai import OpenAI
+from senha import API_KEY  # sua chave da OpenAI
+
+app = Flask(__name__)
+CORS(app)
+
+# Conexão com MySQL
+conexao_BD= {
+    "host": "localhost",
+    "user": "estudamais",
+    "password": "2005Pjl$",
+    "database": "estudamais"
+}
+
+client = OpenAI(api_key=API_KEY)
+
+# Listar agenda
+@app.route("/agenda")
+def agenda():
+    conn = mysql.connector.connect(**db_config)
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM materias")
+    materias = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return jsonify(materias)
+
+# Adicionar matéria
+@app.route("/adicionar", methods=["POST"])
+def adicionar():
+    data = request.get_json()
+    nome = data["nome"]
+    professor = data["professor"]
+    descricao = data["descricao"]
+
+    conn = mysql.connector.connect(**db_config)
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO materias (nome, professor, descricao) VALUES (%s,%s,%s)",
+                   (nome, professor, descricao))
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return jsonify({"mensagem": "Matéria adicionada com sucesso!"})
+
+# Gerar agenda com IA
+@app.route("/gerar_agenda", methods=["POST"])
+def gerar_agenda():
+    data = request.get_json()
+    assuntos = data.get("assuntos", [])
+
+    prompt = "Organize uma agenda de estudo para os seguintes assuntos: " + ", ".join(assuntos)
+    
+    completion = client.chat.completions.create(
+        model="gpt-5",
+        messages=[{"role": "user", "content": prompt}]
+    )
+
+    agenda_texto = completion.choices[0].message.content
+    return jsonify({"agenda": agenda_texto})
+
+if __name__ == "__main__":
+    app.run(debug=True, port=8080)

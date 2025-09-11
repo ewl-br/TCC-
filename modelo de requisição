@@ -1,0 +1,124 @@
+
+[
+  {
+    "assuntos do dia": ["Ecologia", "Revolução Francesa"],
+    "dia do estudo": "01/09/2024",
+    "horario de estudar cada assunto": ["14:00-15:30", "16:00-17:30"],
+    "prioridade do assunto específico": ""
+  },
+  {
+    "assuntos do dia": ["Eletricidade (circuitos)", "Geopolítica contemporânea"],
+    "dia do estudo": "02/09/2024",
+    "horario de estudar cada assunto": ["14:00-15:30", "16:00-17:30"],
+    "prioridade do assunto específico": ""
+  },
+  {
+    "assuntos do dia": ["Química orgânica básica", "Cultura indígena no Brasil"],
+    "dia do estudo": "03/09/2024",
+    "horario de estudar cada assunto": ["14:00-15:30", "16:00-17:30"],
+    "prioridade do assunto específico": ""
+  },
+  {
+    "assuntos do dia": ["Ondas (Física)", "Iluminismo"],
+    "dia do estudo": "04/09/2024",
+    "horario de estudar cada assunto": ["14:00-15:30", "16:00-17:30"],
+    "prioridade do assunto específico": ""
+  },
+  {
+    "assuntos do dia": ["Genética", "Ditadura Militar no Brasil"],
+    "dia do estudo": "05/09/2024",
+    "horario de estudar cada assunto": ["14:00-15:30", "16:00-17:30"],
+    "prioridade do assunto específico": ""
+  },
+  {
+    "assuntos do dia": ["Leis de Newton", "Globalização"],
+    "dia do estudo": "06/09/2024",
+    "horario de estudar cada assunto": ["14:00-15:30", "16:00-17:30"],
+    "prioridade do assunto específico": ""
+  },
+  {
+    "assuntos do dia": ["Química inorgânica (funções)", "Primeira Guerra Mundial"],
+    "dia do estudo": "07/09/2024",
+    "horario de estudar cada assunto": ["14:00-15:30", "16:00-17:30"],
+    "prioridade do assunto específico": ""
+  },
+  {
+    "assuntos do dia": ["Energia e calor", "Colonização do Brasil"],
+    "dia do estudo": "08/09/2024",
+    "horario de estudar cada assunto": ["14:00-15:30", "16:00-17:30"],
+    "prioridade do assunto específico": ""
+  },
+  {
+    "assuntos do dia": ["Fotossíntese", "Movimentos sociais brasileiros"],
+    "dia do estudo": "09/09/2024",
+    "horario de estudar cada assunto": ["14:00-15:30", "16:00-17:30"],
+    "prioridade do assunto específico": ""
+  },
+  {
+    "assuntos do dia": ["Funções da água nos seres vivos", "Brasil Colônia (Economia)"],
+    "dia do estudo": "10/09/2024",
+    "horario de estudar cada assunto": ["14:00-15:30", "16:00-17:30"],
+    "prioridade do assunto específico": ""
+  },
+  {
+    "assuntos do dia": ["Gravitação Universal", "Período Regencial"],
+    "dia do estudo": "11/09/2024",
+    "horario de estudar cada assunto": ["14:00-15:30", "16:00-17:30"],
+    "prioridade do assunto específico": ""
+  },
+  {
+    "assuntos do dia": ["Equilíbrio químico", "Industrialização no Brasil"],
+    "dia do estudo": "12/09/2024",
+    "horario de estudar cada assunto": ["14:00-15:30", "16:00-17:30"],
+    "prioridade do assunto específico": ""
+  },
+  {
+    "assuntos do dia": ["Sistemas do Corpo Humano", "Movimento Operário"],
+    "dia do estudo": "13/09/2024",
+    "horario de estudar cada assunto": ["14:00-15:30", "16:00-17:30"],
+    "prioridade do assunto específico": ""
+  },
+  {
+    "assuntos do dia": ["Transformação de energia (Física)", "Redemocratização do Brasil"],
+    "dia do estudo": "14/09/2024",
+    "horario de estudar cada assunto": ["14:00-15:30", "16:00-17:30"],
+    "prioridade do assunto específico": ""
+  },
+  {
+    "assuntos do dia": ["Reações de oxirredução", "Era Vargas"],
+    "dia do estudo": "15/09/2024",
+    "horario de estudar cada assunto": ["14:00-15:30", "16:00-17:30"],
+    "prioridade do assunto específico": ""
+  },
+  {
+    "assuntos do dia": ["Ciclo do carbono", "Segunda Guerra Mundial"],
+    "dia do estudo": "16/09/2024",
+    "horario de estudar cada assunto": ["14:00-15:30", "16:00-17:30"],
+    "prioridade do assunto específico": ""
+  },
+  {
+    "assuntos do dia": ["Fenômenos ondulatórios", "Brasil República"],
+    "dia do estudo": "17/09/2024",
+    "horario de estudar cada assunto": ["14:00-15:30", "16:00-17:30"],
+    "prioridade do assunto específico": ""
+  },
+  {
+    "assuntos do dia": ["Eletromagnetismo", "Constituição de 1988"],
+    "dia do estudo": "18/09/2024",
+    "horario de estudar cada assunto": ["14:00-15:30", "16:00-17:30"],
+    "prioridade do assunto específico": ""
+  },
+  {
+    "assuntos do dia": ["Química ambiental", "Guerra Fria"],
+    "dia do estudo": "19/09/2024",
+    "horario de estudar cada assunto": ["14:00-15:30", "16:00-17:30"],
+    "prioridade do assunto específico": ""
+  },
+  {
+    "assuntos do dia": ["Fisiologia Vegetal", "Reformas urbanas e sociais"],
+    "dia do estudo": "20/09/2024",
+    "horario de estudar cada assunto": ["14:00-15:30", "16:00-17:30"],
+    "prioridade do assunto específico": ""
+  }
+  // [...continua o padrão até 20 de novembro, intercalando um tema de humanas e um de natureza em cada dia, blocos semanais, 3h por dia, sem prioridades específicas...]
+]

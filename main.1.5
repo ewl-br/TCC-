@@ -1,0 +1,92 @@
+from senha import API_KEY
+from flask import Flask, jsonify
+import json
+from openai import OpenAI    
+from flask_cors import CORS
+import requests
+
+client = OpenAI(api_key=API_KEY)
+app = Flask(__name__)
+
+body_menssagens = {
+   "model": "gpt-5",
+   "messages": [
+        {
+             "role": "user",
+             "content": "Agora atue como minha assistente e forneça todo seu conhecimento."
+        }
+    ]
+}
+
+body_menssagens = json.dumps(body_menssagens)
+
+@app.route("/")
+def home():
+    return "API funcionando. Acesse /openai para ver os modelos ou /resposta para ver uma resposta da IA."
+
+@app.route("/openai")
+def listar_modelos_openai():
+    url = "https://api.openai.com/v1/models"
+    headers = {
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json"
+    }
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        return jsonify(response.json())
+    else:
+        return jsonify({"erro": "Não foi possível acessar a API da OpenAI", "status": response.status_code})
+@app.route("/resposta")
+def resposta():
+    completion = client.chat.completions.create(
+        model="gpt-4.1",
+        messages=[{"role": "user", "content": """quero que você crie um cronograma completo já organizado com os temas intercalados,
+                    entregue em blocos semanais, de: (1 de setembro) até (20 de novembro) para uma prova de: (enem) para o Com os assuntos:
+                    (humanas, natureza), com prioridade em: (sem prioridade especifica) com um intervalo de: (3 horas) para estudar.
+                   
+                    envie a resposta seguindo exatamente esse modelo, sem repetir o que estará escrito abaixo, no formato json,
+                    apenas com a resposta bruta:
+                    assuntos do dia: 
+                    dia do estudo: 
+                    horario de estudar cada assunto: 
+                    prioridade do assunto específico:
+                   
+                    utilize esses dados para ajudar a associar o escrito acima (nada disso deve aparecer e nem será usado,
+                    é apenas um exemplo para ajudar):
+                    
+                    matéria = humanas, natureza, fisica assunto = (geradores) em física; (ditadura no Brasil)
+                    em humanas prioridade = definida pelo usuário, caso usuário não tenha prioridade específica, não adicione prioridade."""}]
+    )
+    resposta = completion.choices[0].message.content
+    return  resposta
+@app.route("/gerar_agenda", methods=["POST"])
+def gerar_agenda():
+    data = requests.get_json()
+    perguntas = data.get("perguntas", [])
+    
+    messages = [{"role": "user", "content": "Organize uma agenda baseada nestes assuntos: " + ", ".join(perguntas)}]
+    
+    completion = client.chat.completions.create(
+        model="gpt-5",
+        messages=messages
+    )
+    
+    resposta = completion.choices[0].message.content
+    return jsonify({"agenda": resposta})
+    
+@app.route("/perguntar", methods=["POST"])
+def perguntar():
+    data = requests.get_json()
+    pergunta = data.get("mensagem", "")
+
+    completion = client.chat.completions.create(
+        model="gpt-5",
+        messages=[
+            {"role": "user", "content": pergunta}
+        ]
+    )
+
+    resposta = completion.choices[0].message.content
+    return jsonify({"resposta": resposta})
+if __name__ == "__main__":
+    app.run(debug=True)

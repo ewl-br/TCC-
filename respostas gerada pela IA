@@ -1,0 +1,156 @@
+from senha import API_KEY
+from flask import Flask, request, jsonify
+from openai import OpenAI
+from flask_cors import CORS
+import json
+
+client = OpenAI(api_key=API_KEY)
+app = Flask(__name__)
+CORS(app)
+
+@app.route("/")
+def home():
+    return "API de Plano de Estudos para ENEM acesse as urls /enem"
+
+# --- Função para gerar plano com IA ---
+def gerar_plano_com_ia(temas, prova):
+    prompt = f"""
+    Estou criando um plano de estudos para {prova}.
+    O usuário escolheu os temas: {', '.join(temas)}.
+    Gere uma lista de assuntos detalhados para revisar e um plano de estudos simples com horários.
+    Responda no formato JSON com as chaves:
+    - "plano_de_estudo": lista de strings com os horários
+    - "assuntos_sugeridos": dicionário onde cada tema é uma lista de assuntos
+    """
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-5",
+            messages=[
+                {"role": "system", "content": f"Você é uma assistente pedagógica especialista em {prova}."},
+                {"role": "user", "content": prompt}
+            ],
+            response_format={"type": "json_object"}  # <-- CORRIGIDO
+        )
+        conteudo = response.choices[0].message.content
+        return json.loads(conteudo)  # transforma em dict
+    except Exception as e:
+        return {"erro": f"Falha ao gerar resposta da IA: {str(e)}"}
+
+@app.route("/enem", methods=["POST", "GET"])
+def enem():
+    if request.method == "POST":
+        dados = request.get_json() or {}
+        temas = dados.get("temas", [])
+    else:
+        temas = request.args.getlist("temas")
+
+    if not temas:
+        return jsonify({"erro": "Nenhum tema selecionado."}), 400
+
+    conteudo_ia = gerar_plano_com_ia(temas, "ENEM")
+
+    planoENEM = []
+    if "humanas" in temas:
+        planoENEM.append("História - 19:00 às 20:30")
+    if "naturezas" in temas:
+        planoENEM.append("Biologia - 20:30 às 22:00")
+    if "linguagens" in temas:
+        planoENEM.append("Literatura - 19:00 às 20:30")
+    if "matematica" in temas:
+        planoENEM.append("Álgebra - 20:30 às 22:00")
+
+    assuntos = {
+        "humanas": [
+            "História do Brasil (Era Vargas, Ditadura Militar)",
+            "Geografia (Questões ambientais, agricultura, globalização)",
+            "Filosofia (Ética, Existencialismo, Filosofia Moderna)",
+            "Sociologia (Cidadania, Movimentos sociais)"
+        ],
+        "naturezas": [
+            "Biologia (Citologia, Ecologia, Genética)",
+            "Química (Química Orgânica, Ligações químicas)",
+            "Física (Cinemática, Eletrodinâmica)"
+        ],
+        "linguagens": [
+            "Redação (Estrutura do texto dissertativo-argumentativo, Coerência e coesão)",
+            "Literatura (Movimentos literários, Análise de textos)",
+            "Gramática (Ortografia, Pontuação)"
+        ],
+        "matematica": [
+            "Álgebra (Equações, Funções)",
+            "Geometria (Figuras planas, Geometria espacial)",
+            "Estatística (Análise de dados, Probabilidade)"
+        ]
+    }
+
+    return jsonify({
+        "temas_recebidos": temas,
+        "plano_de_estudo": planoENEM,
+        "assuntos_sugeridos": {tema: assuntos.get(tema, []) for tema in temas},
+        "resposta_ia": conteudo_ia
+    })
+
+# --- Rotas SSA usam a função genérica ---
+@app.route("/ssa1", methods=["POST", "GET"])
+def ssa1():
+    return gerar_resposta_ssa("SSA1", [
+        {"area": "Biologia Humana", "assuntos": ["Fisiologia", "Homeostase", "Genética básica"]},
+        {"area": "Saúde Pública", "assuntos": ["Epidemiologia", "Saneamento básico"]}
+    ])
+
+@app.route("/ssa2", methods=["POST", "GET"])
+def ssa2():
+    return gerar_resposta_ssa("SSA2", [
+        {"area": "Química", "assuntos": ["Estequiometria", "Termoquímica"]},
+        {"area": "Física", "assuntos": ["Cinemática", "Leis de Newton"]}
+    ])
+
+@app.route("/ssa3", methods=["POST", "GET"])
+def ssa3():
+    return gerar_resposta_ssa("SSA3", [
+        {"area": "Biologia Avançada", "assuntos": ["Biotecnologia", "Evolução"]},
+        {"area": "Física Avançada", "assuntos": ["Eletrodinâmica", "Ondulatória"]}
+    ])
+
+@app.route("/avaliacao", methods=["POST", "GET"])
+def avaliacao():
+    if request.method == "POST":
+        dados = request.get_json() or {}
+        materias = dados.get("materias", [])
+    else:
+        materias = request.args.getlist("materias")
+
+    if not materias:
+        return jsonify({"erro": "Nenhuma matéria selecionada."}), 400
+
+    conteudo_ia = gerar_plano_com_ia(materias, "Avaliação Escolar")
+
+    return jsonify({
+        "materias_recebidas": materias,
+        "plano_de_estudo": [f"{materia} - 19:00 às 20:00" for materia in materias],
+        "resposta_ia": conteudo_ia
+    })
+
+# --- Função para SSA ---
+def gerar_resposta_ssa(nome, lista_assuntos):
+    if request.method == "POST":
+        dados = request.get_json() or {}
+        temas = dados.get("temas", [])
+    else:
+        temas = request.args.getlist("temas")
+
+    conteudo_ia = gerar_plano_com_ia(temas, nome)
+    filtrados = [item for item in lista_assuntos if not temas or item["area"] in temas]
+
+    return jsonify({
+        "temas_recebidos": temas,
+        "plano_de_estudo": [f"{item['area']} - 19:00 às 20:00" for item in filtrados],
+        "assuntos_sugeridos": filtrados,
+        "resposta_ia": conteudo_ia
+    })
+
+if __name__ == "__main__":
+    app.run(debug=True)
+
+                            

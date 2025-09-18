@@ -1,0 +1,24 @@
+
+async function gerarPlano() {
+  try {
+    const resposta = await fetch("http://127.0.0.1:5000/enem", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        temas: ["humanas", "matematica"] // <- o que o usuário escolheu
+      })
+    });
+
+    const dados = await resposta.json(); // transforma em objeto JS
+    console.log("Plano recebido:", dados);
+
+    // Exemplo: mostrar no app
+    // setPlano(dados.plano_de_estudo);
+    // setAssuntos(dados.assuntos_sugeridos);
+
+  } catch (erro) {
+    console.error("Erro ao buscar plano:", erro);
+  }
+}

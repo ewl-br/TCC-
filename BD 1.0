@@ -1,0 +1,21 @@
+DROP DATABASE IF EXISTS estudamais;
+
+-- Cria o banco de dados
+CREATE DATABASE estudamais;
+USE estudamais;
+
+-- ============================
+-- TABELA DE AGENDAS (sem id_usuario)
+-- ============================
+CREATE TABLE agenda (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    data_evento DATE NOT NULL,
+    hora_evento TIME NOT NULL,
+    assunto VARCHAR(200) NOT NULL,
+    descricao TEXT
+) ENGINE=InnoDB;
+
+
+Show Tables;
+
+select*from agenda;

@@ -1,0 +1,198 @@
+import React, { useState, useContext } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  TextInput,
+  ScrollView,
+  ImageBackground,
+  Modal,
+} from 'react-native';
+import { useRouter } from 'expo-router';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { CronogramaContext } from '../../context/CronogramaContext';
+
+export default function AvaliacaoEscolar() {
+  const router = useRouter();
+  const { setAvaliacoes, avaliacoes } = useContext(CronogramaContext);
+
+  const [nomeMateria, setNomeMateria] = useState('');
+  const [grauEscolaridade, setGrauEscolaridade] = useState<'1° ano' | '2° ano' | '3° ano' | null>(null);
+  const [horarioInicio, setHorarioInicio] = useState('');
+  const [horarioFim, setHorarioFim] = useState('');
+  const [showTimePicker, setShowTimePicker] = useState<'inicio' | 'fim' | false>(false);
+  const [conteudoEstudo, setConteudoEstudo] = useState('');
+
+  const [modalAviso, setModalAviso] = useState(false);
+
+  const graus = ['1° ano', '2° ano', '3° ano'] as const;
+
+  const salvarAvaliacao = () => {
+    // Validação
+    if (!nomeMateria || !grauEscolaridade || !horarioInicio || !horarioFim || !conteudoEstudo) {
+      setModalAviso(true);
+      return;
+    }
+
+    const novaAvaliacao = {
+      titulo: nomeMateria,
+      data: new Date().toISOString().split('T')[0],
+      observacoes: `Grau: ${grauEscolaridade} | Horário: ${horarioInicio} - ${horarioFim} | Conteúdo: ${conteudoEstudo}`,
+    };
+
+    setAvaliacoes([...avaliacoes, novaAvaliacao]);
+    router.back();
+  };
+
+  return (
+    <ImageBackground
+      source={require('../../assets/images/avaliacao.png')}
+      style={styles.background}
+      resizeMode="cover"
+    >
+      {/* Seta de voltar */}
+      <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <Text style={styles.backArrow}>←</Text>
+      </TouchableOpacity>
+
+      <ScrollView contentContainerStyle={styles.container}>
+        <Text style={styles.titulo}>Avaliação Escolar</Text>
+
+        {/* Nome da Matéria */}
+        <View style={styles.inputContainer}>
+          <Text style={styles.inputLabel}>Nome da Matéria</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Digite o nome da matéria"
+            placeholderTextColor="#999"
+            value={nomeMateria}
+            onChangeText={setNomeMateria}
+          />
+        </View>
+
+        {/* Grau de escolaridade */}
+        <View style={styles.grauContainer}>
+          <Text style={styles.inputLabel}>Grau de Escolaridade</Text>
+          <View style={styles.graus}>
+            {graus.map((grau) => (
+              <TouchableOpacity
+                key={grau}
+                style={[styles.grauBotao, grauEscolaridade === grau && styles.grauSelecionado]}
+                onPress={() => setGrauEscolaridade(grau)}
+              >
+                <Text style={[styles.grauTexto, grauEscolaridade === grau && styles.grauTextoSelecionado]}>
+                  {grau}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* Horário de estudo */}
+        <View style={styles.inputContainerCentered}>
+          <Text style={styles.inputLabelCentered}>Horário de Estudo</Text>
+          <Text style={styles.disclaimer}>Selecione o horário de início e fim do estudo</Text>
+
+          <View style={styles.horarioContainer}>
+            <TouchableOpacity style={styles.inputHorario} onPress={() => setShowTimePicker('inicio')}>
+              <Text style={{ color: horarioInicio ? '#000' : '#999', fontSize: 16 }}>{horarioInicio || '00:00'}</Text>
+            </TouchableOpacity>
+
+            <Text style={styles.hifen}>-</Text>
+
+            <TouchableOpacity style={styles.inputHorario} onPress={() => setShowTimePicker('fim')}>
+              <Text style={{ color: horarioFim ? '#000' : '#999', fontSize: 16 }}>{horarioFim || '00:00'}</Text>
+            </TouchableOpacity>
+          </View>
+
+          {showTimePicker && (
+            <DateTimePicker
+              value={
+                showTimePicker === 'inicio'
+                  ? (horarioInicio ? new Date(`1970-01-01T${horarioInicio}:00`) : new Date())
+                  : (horarioFim ? new Date(`1970-01-01T${horarioFim}:00`) : new Date())
+              }
+              mode="time"
+              is24Hour
+              display="default"
+              onChange={(_, selectedDate) => {
+                if (!selectedDate) return;
+                const h = selectedDate.getHours().toString().padStart(2, '0');
+                const m = selectedDate.getMinutes().toString().padStart(2, '0');
+                showTimePicker === 'inicio' ? setHorarioInicio(`${h}:${m}`) : setHorarioFim(`${h}:${m}`);
+                setShowTimePicker(false);
+              }}
+            />
+          )}
+        </View>
+
+        {/* Conteúdo de estudo */}
+        <View style={styles.inputContainer}>
+          <Text style={styles.inputLabel}>Conteúdo de Estudo</Text>
+          <Text style={styles.dicaConteudo}>Separe os tópicos por vírgulas ou escreva cada um em uma linha.</Text>
+          <TextInput
+            style={[styles.input, styles.inputMultiline]}
+            placeholder="Ex: Álgebra, Geometria, etc."
+            placeholderTextColor="#999"
+            value={conteudoEstudo}
+            onChangeText={setConteudoEstudo}
+            multiline
+          />
+        </View>
+
+        {/* Botão Salvar */}
+        <TouchableOpacity style={styles.botaoSalvar} onPress={salvarAvaliacao}>
+          <Text style={styles.textoBotaoSalvar}>Salvar</Text>
+        </TouchableOpacity>
+      </ScrollView>
+
+      {/* Modal de aviso */}
+      <Modal visible={modalAviso} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitulo}>Campos incompletos</Text>
+            <Text style={styles.modalTexto}>Preencha todos os campos antes de salvar.</Text>
+            <TouchableOpacity style={styles.modalBotao} onPress={() => setModalAviso(false)}>
+              <Text style={styles.modalBotaoTexto}>Entendi</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </ImageBackground>
+  );
+}
+
+const styles = StyleSheet.create({
+  background: { flex: 1 },
+  backButton: { position: 'absolute', top: 40, left: 20, zIndex: 10 },
+  backArrow: { fontSize: 28, color: '#FFF', fontWeight: 'bold' },
+  container: { flexGrow: 1, paddingHorizontal: 20, paddingTop: 100, paddingBottom: 40, alignItems: 'center', justifyContent: 'flex-start' },
+  titulo: { fontSize: 28, fontWeight: 'bold', color: '#FFF', marginBottom: 40, textAlign: 'center' },
+  inputContainer: { width: '100%', marginBottom: 20 },
+  inputLabel: { fontSize: 16, fontWeight: 'bold', marginBottom: 8, color: '#FFF' },
+  input: { width: '100%', borderWidth: 1, borderColor: '#154C4C', borderRadius: 12, paddingHorizontal: 15, fontSize: 16, backgroundColor: 'rgba(255,255,255,0.9)', color: '#000', height: 55, justifyContent: 'center' },
+  inputMultiline: { height: 120, paddingTop: 10 },
+  dicaConteudo: { color: '#FFF', fontSize: 13, marginBottom: 6, opacity: 0.8 },
+  grauContainer: { width: '100%', marginBottom: 20 },
+  graus: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 },
+  grauBotao: { flex: 1, paddingVertical: 14, borderWidth: 1, borderColor: '#154C4C', borderRadius: 12, marginHorizontal: 5, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.9)' },
+  grauSelecionado: { backgroundColor: '#154C4C' },
+  grauTexto: { fontSize: 16, color: '#000' },
+  grauTextoSelecionado: { color: '#FFF', fontWeight: 'bold' },
+  inputContainerCentered: { width: '100%', marginTop: 20, marginBottom: 20, alignItems: 'center' },
+  inputLabelCentered: { fontSize: 16, fontWeight: 'bold', marginBottom: 5, color: '#fff', textAlign: 'center' },
+  disclaimer: { color: '#FFF', fontSize: 13, opacity: 0.8, textAlign: 'center' },
+  horarioContainer: { flexDirection: 'row', justifyContent: 'center', gap: 10, marginTop: 6 },
+  inputHorario: { width: 100, height: 51, borderWidth: 1, borderColor: '#154C4C', borderRadius: 8, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.9)' },
+  hifen: { color: '#FFF', fontSize: 18, fontWeight: 'bold', alignSelf: 'center' },
+  botaoSalvar: { width: '100%', backgroundColor: '#154C4C', paddingVertical: 18, borderRadius: 12, alignItems: 'center', marginTop: 20 },
+  textoBotaoSalvar: { color: '#FFF', fontSize: 18, fontWeight: 'bold' },
+  // Modal
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center' },
+  modalContent: { width: '80%', backgroundColor: 'white', padding: 20, borderRadius: 12, alignItems: 'center' },
+  modalTitulo: { fontSize: 18, fontWeight: 'bold', marginBottom: 10, color: '#154C4C' },
+  modalTexto: { fontSize: 16, marginBottom: 20, textAlign: 'center' },
+  modalBotao: { paddingVertical: 10, paddingHorizontal: 20, backgroundColor: '#21A39B', borderRadius: 8 },
+  modalBotaoTexto: { color: 'white', fontWeight: 'bold', fontSize: 16 },
+});

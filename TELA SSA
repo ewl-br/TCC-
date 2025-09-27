@@ -1,0 +1,310 @@
+import React, { useState } from 'react';
+import { 
+  View, Text, TouchableOpacity, StyleSheet, Image, ScrollView, 
+  ImageBackground, Modal, Platform 
+} from 'react-native';
+import { useRouter } from 'expo-router';
+import { ChevronDown, ChevronUp } from 'lucide-react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
+
+type Area = 'Humanas' | 'Linguagens' | 'Matemática' | 'Naturezas' | 'Redação';
+type Materia = { nome: string; prioridade: string; selecionada: boolean; };
+
+export default function SSA() {
+  const router = useRouter();
+
+  const [categoria, setCategoria] = useState<'SSA1' | 'SSA2' | 'SSA3' | null>(null);
+  const [areas, setAreas] = useState<Record<Area, { aberta: boolean; selecionada: boolean; materias: Materia[] }>>({
+    Humanas: { aberta: true, selecionada: false, materias: [
+      { nome: 'Geografia', prioridade: 'Média', selecionada: false },
+      { nome: 'História', prioridade: 'Média', selecionada: false },
+      { nome: 'Sociologia', prioridade: 'Média', selecionada: false },
+      { nome: 'Filosofia', prioridade: 'Média', selecionada: false },
+    ] },
+    Linguagens: { aberta: true, selecionada: false, materias: [
+      { nome: 'Português', prioridade: 'Média', selecionada: false },
+      { nome: 'Inglês', prioridade: 'Média', selecionada: false },
+      { nome: 'Artes', prioridade: 'Média', selecionada: false },
+      { nome: 'Educação Física', prioridade: 'Média', selecionada: false },
+    ] },
+    Matemática: { aberta: true, selecionada: false, materias: [
+      { nome: 'Matemática', prioridade: 'Média', selecionada: false }
+    ] },
+    Naturezas: { aberta: true, selecionada: false, materias: [
+      { nome: 'Biologia', prioridade: 'Média', selecionada: false },
+      { nome: 'Química', prioridade: 'Média', selecionada: false },
+      { nome: 'Física', prioridade: 'Média', selecionada: false }
+    ] },
+    Redação: { aberta: true, selecionada: false, materias: [
+      { nome: 'Redação', prioridade: 'Média', selecionada: false }
+    ] },
+  });
+
+  const [horarioInicio, setHorarioInicio] = useState('');
+  const [horarioFim, setHorarioFim] = useState('');
+  const [showTimePicker, setShowTimePicker] = useState<'inicio' | 'fim' | false>(false);
+
+  const [modalAviso, setModalAviso] = useState(false);
+  const [modalSucesso, setModalSucesso] = useState(false);
+  const [mensagemAviso, setMensagemAviso] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const toggleCategoria = (cat: 'SSA1' | 'SSA2' | 'SSA3') => setCategoria(cat);
+
+  const toggleArea = (area: Area) => {
+    setAreas(prev => {
+      const novaSelecionada = !prev[area].selecionada;
+      return { 
+        ...prev, 
+        [area]: { 
+          ...prev[area], 
+          selecionada: novaSelecionada, 
+          materias: prev[area].materias.map(m => ({ ...m, selecionada: novaSelecionada })) 
+        } 
+      };
+    });
+  };
+
+  const toggleExpandirArea = (area: Area) => {
+    setAreas(prev => ({ ...prev, [area]: { ...prev[area], aberta: !prev[area].aberta } }));
+  };
+
+  const toggleMateria = (area: Area, idx: number) => {
+    setAreas(prev => {
+      const materiasAtualizadas = [...prev[area].materias];
+      materiasAtualizadas[idx].selecionada = !materiasAtualizadas[idx].selecionada;
+      return { 
+        ...prev, 
+        [area]: { ...prev[area], materias: materiasAtualizadas, selecionada: materiasAtualizadas.every(m => m.selecionada) } 
+      };
+    });
+  };
+
+  const setPrioridadeMateria = (area: Area, idx: number, prioridade: string) => {
+    setAreas(prev => {
+      const materiasAtualizadas = [...prev[area].materias];
+      materiasAtualizadas[idx].prioridade = prioridade;
+      return { ...prev, [area]: { ...prev[area], materias: materiasAtualizadas } };
+    });
+  };
+
+  const getCorPrioridade = (prioridade: string) => {
+    switch (prioridade) {
+      case 'Alta': return '#E63946';  
+      case 'Média': return '#FFD60A'; 
+      case 'Baixa': return '#2D6A4F'; 
+      default: return '#ccc';
+    }
+  };
+
+  const salvarSSA = async () => {
+    if (!categoria) {
+      setMensagemAviso('Preencha todos os campos antes de salvar.');
+      setModalAviso(true);
+      return;
+    }
+
+    const materiasSelecionadas = Object.values(areas).flatMap(a => a.materias.filter(m => m.selecionada));
+    if (materiasSelecionadas.length === 0) {
+      setMensagemAviso('Selecione pelo menos uma matéria.');
+      setModalAviso(true);
+      return;
+    }
+
+    if (!horarioInicio || !horarioFim) {
+      setMensagemAviso('Preencha os horários de início e fim.');
+      setModalAviso(true);
+      return;
+    }
+
+    setLoading(true);
+    const payload = { categoria, horarioInicio, horarioFim, materias: materiasSelecionadas };
+
+    try {
+      const response = await fetch('http://localhost:8081', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erro ao enviar: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('Resposta da API:', data);
+
+      setModalSucesso(true);
+
+      setTimeout(() => {
+        router.back();
+      }, 100);
+
+    } catch (err: any) {
+      console.error('Erro no fetch:', err);
+      setMensagemAviso('Não foi possível salvar os dados. ' + err.message);
+      setModalAviso(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <ImageBackground source={require('../../assets/images/ssa.png')} style={styles.background}>
+      <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <Text style={styles.backArrow}>←</Text>
+      </TouchableOpacity>
+
+      <ScrollView contentContainerStyle={styles.container}>
+        <Text style={styles.titulo}>SSA</Text>
+
+        <View style={styles.categoriasContainer}>
+          {['SSA1','SSA2','SSA3'].map(cat => (
+            <TouchableOpacity 
+              key={cat} 
+              style={[styles.categoriaBotao, categoria === cat && { backgroundColor: '#A0D995' }]} 
+              onPress={() => toggleCategoria(cat as 'SSA1'|'SSA2'|'SSA3')}
+            >
+              <Text style={styles.categoriaTexto}>{cat}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <View style={styles.areasContainer}>
+          {(Object.keys(areas) as Area[]).map(area => {
+            if (area === 'Redação' && categoria !== 'SSA3') return null;
+            return (
+              <View key={area} style={styles.areaContainer}>
+                <TouchableOpacity style={styles.areaQuadrado} onPress={() => toggleArea(area)}>
+                  {areas[area].selecionada && <Image source={require('../../assets/images/verificado.png')} style={styles.check} />}
+                  <Text style={styles.areaTexto}>{area}</Text>
+                  <TouchableOpacity onPress={() => toggleExpandirArea(area)}>
+                    {areas[area].aberta ? <ChevronUp size={28} color="#000" /> : <ChevronDown size={28} color="#000" />}
+                  </TouchableOpacity>
+                </TouchableOpacity>
+
+                {areas[area].aberta && (
+                  <View style={styles.materiasContainer}>
+                    {areas[area].materias.map((materia, idx) => (
+                      <View key={idx} style={[styles.materiaLinha, !materia.selecionada && { opacity: 0.5 }]}>
+                        <TouchableOpacity style={styles.materiaQuadrado} onPress={() => toggleMateria(area, idx)}>
+                          {materia.selecionada && <Image source={require('../../assets/images/verificado.png')} style={styles.checkMateria} />}
+                          <Text style={styles.materiaTexto}>{materia.nome}</Text>
+                        </TouchableOpacity>
+                        <View style={styles.prioridadesContainer}>
+                          {['Alta','Média','Baixa'].map(opcao => (
+                            <TouchableOpacity 
+                              key={opcao} 
+                              style={[styles.opcaoPrioridade, materia.prioridade === opcao && { backgroundColor: getCorPrioridade(opcao) }]} 
+                              onPress={() => setPrioridadeMateria(area, idx, opcao)}
+                            >
+                              <Text style={[styles.textoOpcao, materia.prioridade === opcao && { color: '#FFF' }]}>{opcao}</Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            );
+          })}
+        </View>
+
+        <View style={styles.inputContainerCentered}>
+          <Text style={styles.inputLabelCentered}>Horário de estudo</Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 10, marginTop: 6 }}>
+            <TouchableOpacity style={styles.inputHorario} onPress={() => setShowTimePicker('inicio')}>
+              <Text style={{ color: horarioInicio ? '#000' : '#999', fontSize: 16 }}>{horarioInicio || '00:00'}</Text>
+            </TouchableOpacity>
+            <Text style={{ color: '#FFF', fontSize: 18, fontWeight: 'bold', alignSelf: 'center' }}>-</Text>
+            <TouchableOpacity style={styles.inputHorario} onPress={() => setShowTimePicker('fim')}>
+              <Text style={{ color: horarioFim ? '#000' : '#999', fontSize: 16 }}>{horarioFim || '00:00'}</Text>
+            </TouchableOpacity>
+          </View>
+
+          {showTimePicker && (
+            <DateTimePicker
+              value={showTimePicker === 'inicio' ? (horarioInicio ? new Date(`1970-01-01T${horarioInicio}:00`) : new Date()) : (horarioFim ? new Date(`1970-01-01T${horarioFim}:00`) : new Date())}
+              mode="time"
+              is24Hour
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={(_, selectedDate) => {
+                setShowTimePicker(false);
+                if (!selectedDate) return;
+                const h = selectedDate.getHours().toString().padStart(2,'0');
+                const m = selectedDate.getMinutes().toString().padStart(2,'0');
+                showTimePicker === 'inicio' ? setHorarioInicio(`${h}:${m}`) : setHorarioFim(`${h}:${m}`);
+              }}
+            />
+          )}
+        </View>
+
+        <TouchableOpacity style={styles.botaoSalvar} onPress={salvarSSA} disabled={loading}>
+          <Text style={styles.textoBotaoSalvar}>{loading ? 'Enviando...' : 'Salvar'}</Text>
+        </TouchableOpacity>
+      </ScrollView>
+
+      <Modal visible={modalAviso} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitulo}>Campos incompletos</Text>
+            <Text style={styles.modalTexto}>{mensagemAviso}</Text>
+            <TouchableOpacity style={styles.modalBotao} onPress={() => setModalAviso(false)}>
+              <Text style={styles.modalBotaoTexto}>Entendi</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={modalSucesso} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={[styles.modalTitulo, { color: '#2D6A4F' }]}>Sucesso</Text>
+            <Text style={styles.modalTexto}>Seus dados foram salvos com sucesso.</Text>
+            <TouchableOpacity style={styles.modalBotao} onPress={() => setModalSucesso(false)}>
+              <Text style={styles.modalBotaoTexto}>Fechar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </ImageBackground>
+  );
+}
+
+const styles = StyleSheet.create({
+  background: { flex: 1 },
+  backButton: { position: 'absolute', top: 40, left: 20, zIndex: 10 },
+  backArrow: { fontSize: 28, color: '#FFF', fontWeight: 'bold' },
+  container: { padding: 20, paddingTop: 80, alignItems: 'center' },
+  titulo: { fontSize: 28, fontWeight: 'bold', marginBottom: 30, color: '#fff' },
+  categoriasContainer: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 20, width: '100%' },
+  categoriaBotao: { padding: 12, borderRadius: 8, borderWidth: 2, borderColor: '#154C4C', backgroundColor: 'rgba(255,255,255,0.8)' },
+  categoriaTexto: { fontSize: 16, fontWeight: 'bold', color: '#000' },
+  areasContainer: { width: '100%' },
+  areaContainer: { marginBottom: 15 },
+  areaQuadrado: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 2, borderColor: '#154C4C', borderRadius: 8, padding: 10, backgroundColor: 'rgba(255,255,255,0.8)' },
+  check: { width: 24, height: 24, marginRight: 10 },
+  areaTexto: { fontSize: 18, fontWeight: 'bold', color: '#000', flex: 1 },
+  materiasContainer: { marginTop: 10, paddingLeft: 20 },
+  materiaLinha: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
+  materiaQuadrado: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#154C4C', borderRadius: 6, padding: 8, backgroundColor: 'rgba(255,255,255,0.9)', flex: 1 },
+  checkMateria: { width: 20, height: 20, marginRight: 8 },
+  materiaTexto: { fontSize: 16, fontWeight: 'bold', color: '#000' },
+  prioridadesContainer: { flexDirection: 'row', marginLeft: 10 },
+  opcaoPrioridade: { padding: 6, borderWidth: 1, borderColor: '#154C4C', borderRadius: 6, marginLeft: 5, backgroundColor: 'rgba(255,255,255,0.9)' },
+  textoOpcao: { fontSize: 14, fontWeight: 'bold', color: '#000' },
+  inputContainerCentered: { width: '100%', marginTop: 20, marginBottom: 20, alignItems: 'center' },
+  inputLabelCentered: { fontSize: 16, fontWeight: 'bold', marginBottom: 5, color: '#fff', textAlign: 'center' },
+  inputHorario: { width: 100, height: 51, borderWidth: 1, borderColor: '#154C4C', borderRadius: 8, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.9)' },
+  botaoSalvar: { width: '100%', backgroundColor: '#154C4C', padding: 15, borderRadius: 8, alignItems: 'center', marginTop: 10 },
+  textoBotaoSalvar: { color: '#FFF', fontSize: 18, fontWeight: 'bold' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center' },
+  modalContent: { width: '80%', backgroundColor: 'white', padding: 20, borderRadius: 12, alignItems: 'center' },
+  modalTitulo: { fontSize: 18, fontWeight: 'bold', marginBottom: 10, color: '#154C4C' },
+  modalTexto: { fontSize: 16, marginBottom: 20, textAlign: 'center' },
+  modalBotao: { paddingVertical: 10, paddingHorizontal: 20, backgroundColor: '#21A39B', borderRadius: 8 },
+  modalBotaoTexto: { color: 'white', fontWeight: 'bold', fontSize: 16 },
+});

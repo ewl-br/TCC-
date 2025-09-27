@@ -1,0 +1,29 @@
+import 'react-native-url-polyfill/auto';
+import 'react-native-get-random-values';
+
+import { initializeApp, getApp, getApps } from 'firebase/app';
+import { initializeAuth, getAuth, getReactNativePersistence } from 'firebase/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDtt4Zbfbad-0rvZxJ-cBw8Bm-oRxzJoQA",
+  authDomain: "estudadb.firebaseapp.com",
+  projectId: "estudadb",
+  storageBucket: "estudadb.appspot.com",
+  messagingSenderId: "221501146089",
+  appId: "1:221501146089:web:4d2cc4ae3ae75c5f188178",
+  measurementId: "G-D81DN3W132"
+};
+
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+
+let authInstance;
+try {
+  authInstance = initializeAuth(app, {
+    persistence: getReactNativePersistence(AsyncStorage),
+  });
+} catch {
+  authInstance = getAuth(app);
+}
+
+export const auth = authInstance;

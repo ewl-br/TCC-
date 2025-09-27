@@ -1,0 +1,99 @@
+import React from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ImageBackground, Image } from 'react-native';
+import { useRouter } from 'expo-router';
+
+export default function Funcoes() {
+  const router = useRouter();
+
+  return (
+    <ImageBackground
+      source={require('../../assets/images/funcoes.png')}
+      style={styles.imagemFundo}
+      resizeMode="cover"
+    >
+      <View style={styles.container}>
+        <Image
+          source={require('../../assets/images/logoestuda.png')}
+          style={styles.logo}
+        />
+
+        <TouchableOpacity
+          style={styles.botao}
+          onPress={() => router.push('/gerarAgenda')}
+        >
+          <Image
+            source={require('../../assets/images/agenda.png')}
+            style={styles.icon}
+          />
+          <Text style={styles.textoBotao}>Gerar Agenda</Text>
+        </TouchableOpacity>  
+
+        <TouchableOpacity 
+          style={styles.botao} 
+          onPress={() => router.push('/suaAgenda')}
+        >
+          <Image
+            source={require('../../assets/images/evento.png')} 
+            style={styles.icon}
+          />
+          <Text style={styles.textoBotao}>Sua Agenda</Text>
+        </TouchableOpacity>  
+
+         <TouchableOpacity 
+          style={styles.botao} 
+          onPress={() => router.push('/config')}
+        >
+          <Image
+            source={require('../../assets/images/engrenagem.png')} 
+            style={styles.icon}
+          />
+          <Text style={styles.textoBotao}>Configurações</Text>
+        </TouchableOpacity>  
+      </View>
+    </ImageBackground>
+  );
+}
+
+const styles = StyleSheet.create({
+  imagemFundo: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  container: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 80,
+    gap: 25,
+  },
+  logo: {
+    width: 250,
+    height: 250,
+    resizeMode: 'contain',
+    marginBottom: -20, 
+  },
+  botao: {
+    flexDirection: 'row',        
+    alignItems: 'center',        
+    justifyContent: 'center',    
+    backgroundColor: '#154C4C',
+    width: 330,
+    height: 130,
+    borderRadius: 10,
+    borderColor: '#21A39B',
+    borderWidth: 1,
+    marginBottom: 20, 
+    paddingHorizontal: 20,
+  },
+  icon: {
+    width: 24,
+    height: 24,
+    marginRight: 10,
+  },
+  textoBotao: {
+    color: '#FFF',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+});

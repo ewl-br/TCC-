@@ -1,0 +1,105 @@
+import React, { useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { useRouter } from 'expo-router';
+import { sendPasswordResetEmail } from 'firebase/auth';
+import { auth } from '../config/firebaseConfig';
+
+export default function ResetSenha() {
+  const router = useRouter();
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const resetSenha = async () => {
+    if (!email) {
+      Alert.alert('Atenção', 'Informe seu e-mail');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await sendPasswordResetEmail(auth, email);
+      Alert.alert(
+        'Sucesso',
+        'Um link de redefinição de senha foi enviado para seu e-mail'
+      );
+      router.push('/login');
+    } catch (error: any) {
+      console.error('Erro ao resetar senha:', error.message);
+      Alert.alert('Erro', 'Não foi possível enviar o link. Verifique o e-mail.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.titulo}>Redefinir Senha</Text>
+
+      <TextInput
+        placeholder="Digite seu e-mail"
+        placeholderTextColor="#999"
+        style={styles.input}
+        value={email}
+        onChangeText={setEmail}
+        keyboardType="email-address"
+        autoCapitalize="none"
+      />
+
+      {loading ? (
+        <ActivityIndicator size="large" color="#154C4C" style={{ marginTop: 20 }} />
+      ) : (
+        <TouchableOpacity style={styles.botao} onPress={resetSenha}>
+          <Text style={styles.textoBotao}>Enviar Link</Text>
+        </TouchableOpacity>
+      )}
+
+      <TouchableOpacity onPress={() => router.push('/login')}>
+        <Text style={styles.voltar}>Voltar para Login</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 20,
+    justifyContent: 'center',
+    backgroundColor: '#e5e4e2',
+  },
+  titulo: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#154C4C',
+    textAlign: 'center',
+    marginBottom: 30,
+  },
+  input: {
+    width: '100%',
+    padding: 10,
+    marginBottom: 20,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#000',
+    color: '#000',
+  },
+  botao: {
+    backgroundColor: '#154C4C',
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  textoBotao: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  voltar: {
+    textAlign: 'center',
+    color: '#154C4C',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+});

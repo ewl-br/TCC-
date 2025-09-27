@@ -1,0 +1,131 @@
+import React, { useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { useRouter } from 'expo-router';
+import { auth } from '../config/firebaseConfig';
+import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
+
+export default function AlterarSenha() {
+  const router = useRouter();
+  const [senhaAtual, setSenhaAtual] = useState('');
+  const [novaSenha, setNovaSenha] = useState('');
+  const [confirmarSenha, setConfirmarSenha] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleAlterarSenha = async () => {
+    if (!senhaAtual || !novaSenha || !confirmarSenha) {
+      Alert.alert('Preencha todos os campos!');
+      return;
+    }
+    if (novaSenha !== confirmarSenha) {
+      Alert.alert('As senhas não coincidem!');
+      return;
+    }
+    setLoading(true);
+    try {
+      const user = auth.currentUser;
+      if (!user || !user.email) throw new Error('Usuário não autenticado');
+      const credential = EmailAuthProvider.credential(user.email, senhaAtual);
+      await reauthenticateWithCredential(user, credential);
+      await updatePassword(user, novaSenha);
+      Alert.alert('Senha alterada com sucesso!');
+      router.back();
+    } catch (error: any) {
+      if (error.code === 'auth/wrong-password') {
+        Alert.alert('Senha atual incorreta!');
+      } else if (error.code === 'auth/weak-password') {
+        Alert.alert('A nova senha deve ter pelo menos 6 caracteres.');
+      } else {
+        Alert.alert('Erro ao alterar senha', error.message || 'Tente novamente.');
+      }
+    }
+    setLoading(false);
+  };
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.titulo}>Alterar Senha</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="Senha atual"
+        placeholderTextColor="#999"
+        secureTextEntry
+        value={senhaAtual}
+        onChangeText={setSenhaAtual}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Nova senha"
+        placeholderTextColor="#999"
+        secureTextEntry
+        value={novaSenha}
+        onChangeText={setNovaSenha}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Confirmar nova senha"
+        placeholderTextColor="#999"
+        secureTextEntry
+        value={confirmarSenha}
+        onChangeText={setConfirmarSenha}
+      />
+      <TouchableOpacity
+        style={styles.botao}
+        onPress={handleAlterarSenha}
+        disabled={loading}
+      >
+        <Text style={styles.textoBotao}>{loading ? 'Salvando...' : 'Salvar Senha'}</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.voltar} onPress={() => router.back()}>
+        <Text style={styles.voltarTxt}>Voltar</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#e5e4e2',
+    padding: 24,
+    justifyContent: 'center',
+  },
+  titulo: {
+    fontSize: 26,
+    fontWeight: 'bold',
+    color: '#154C4C',
+    marginBottom: 30,
+    textAlign: 'center',
+  },
+  input: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#154C4C33',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    marginBottom: 18,
+    color: '#154C4C',
+  },
+  botao: {
+    backgroundColor: '#154C4C',
+    paddingVertical: 16,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  textoBotao: {
+    color: '#FFF',
+    fontSize: 17,
+    fontWeight: 'bold',
+  },
+  voltar: {
+    marginTop: 24,
+    alignItems: 'center',
+  },
+  voltarTxt: {
+    color: '#154C4C',
+    fontSize: 16,
+    textDecorationLine: 'underline',
+  },
+});

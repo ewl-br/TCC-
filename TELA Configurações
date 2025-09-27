@@ -1,0 +1,198 @@
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Image,
+  Alert,
+} from "react-native";
+import { useRouter } from "expo-router";
+import { auth } from "../../../config/firebaseConfig";
+import { signOut, deleteUser, sendPasswordResetEmail } from "firebase/auth";
+
+export default function Configuracoes() {
+  const router = useRouter();
+  const [nome, setNome] = useState("");
+  const [email, setEmail] = useState("");
+
+  useEffect(() => {
+    const user = auth.currentUser;
+    setNome(user?.displayName || "Usuário");
+    setEmail(user?.email || "");
+  }, []);
+
+  const handleSair = async () => {
+    await signOut(auth);
+    router.replace("/login");
+  };
+
+  const handleExcluirConta = async () => {
+    Alert.alert(
+      "Excluir Conta",
+      "Tem certeza que deseja excluir sua conta? Esta ação não poderá ser desfeita.",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Excluir",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const user = auth.currentUser;
+              if (user) {
+                await deleteUser(user);
+                Alert.alert("Conta excluída com sucesso!");
+                router.replace("/login");
+              }
+            } catch (error: any) {
+              Alert.alert(
+                "Erro",
+                "Não foi possível excluir a conta. Faça login novamente e tente de novo."
+              );
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleAlterarSenha = async () => {
+    if (!email) {
+      Alert.alert("Erro", "Nenhum e-mail encontrado para este usuário.");
+      return;
+    }
+
+    try {
+      await sendPasswordResetEmail(auth, email);
+      Alert.alert(
+        "E-mail enviado",
+        "Enviamos um link para redefinir sua senha. Verifique sua caixa de entrada."
+      );
+    } catch (error: any) {
+      Alert.alert("Erro", "Não foi possível enviar o e-mail de redefinição.");
+    }
+  };
+
+  return (
+    <View style={styles.container}>
+      {/* 🔹 Cabeçalho com seta de voltar */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.voltarBotao}>
+          <Text style={styles.voltarTexto}>←</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitulo}>Configurações</Text>
+      </View>
+
+      {/* Dados do usuário */}
+      <View style={styles.userBox}>
+        <Image
+          source={require("../../../assets/images/user.png")}
+          style={styles.userIcon}
+        />
+        <View>
+          <Text style={styles.userName}>{nome}</Text>
+          <Text style={styles.userEmail}>{email}</Text>
+        </View>
+      </View>
+
+      {/* Opções */}
+      <View style={styles.optionsBox}>
+        <TouchableOpacity style={styles.optionBtn} onPress={handleAlterarSenha}>
+          <Text style={styles.optionTxt}>Alterar Senha</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.optionBtn}
+          onPress={() =>
+            Alert.alert("Alternar entre contas", "Funcionalidade em breve!")
+          }
+        >
+          <Text style={styles.optionTxt}>Alternar entre Contas</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.optionBtn} onPress={handleExcluirConta}>
+          <Text style={[styles.optionTxt, { color: "#E63946" }]}>
+            Excluir Conta
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.optionBtn} onPress={handleSair}>
+          <Text style={styles.optionTxt}>Sair da Conta</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Versão */}
+      <View style={styles.versionBox}>
+        <Text style={styles.versionTxt}>Versão 0.0.1</Text>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#e5e4e2",
+    padding: 24,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 20,
+    marginBottom: 30,
+    gap: 12,
+  },
+  voltarBotao: { padding: 6 },
+  voltarTexto: { fontSize: 26, color: "#154C4C", fontWeight: "bold" },
+  headerTitulo: { fontSize: 20, fontWeight: "bold", color: "#154C4C" },
+
+  userBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 40,
+    gap: 18,
+  },
+  userIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "#154C4C22",
+    marginRight: 10,
+  },
+  userName: {
+    fontSize: 22,
+    fontWeight: "bold",
+    color: "#154C4C",
+  },
+  userEmail: {
+    fontSize: 15,
+    color: "#666",
+    marginTop: 2,
+  },
+  optionsBox: {
+    marginTop: 10,
+    gap: 10,
+  },
+  optionBtn: {
+    backgroundColor: "#fff",
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    marginBottom: 6,
+    borderWidth: 1,
+    borderColor: "#154C4C33",
+  },
+  optionTxt: {
+    color: "#154C4C",
+    fontSize: 17,
+    fontWeight: "bold",
+  },
+  versionBox: {
+    flex: 1,
+    justifyContent: "flex-end",
+    alignItems: "center",
+    marginBottom: 18,
+  },
+  versionTxt: {
+    color: "#888",
+    fontSize: 14,
+    fontWeight: "bold",
+  },
+});

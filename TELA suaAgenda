@@ -1,0 +1,245 @@
+import React, { useContext, useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  ImageBackground,
+  Modal,
+  TextInput,
+} from "react-native";
+import { CronogramaContext, CronogramaKey } from "../../../context/CronogramaContext";
+import { useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { auth } from "../../../config/firebaseConfig";
+
+const dataAtual = new Intl.DateTimeFormat("pt-BR", {
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+}).format(new Date());
+
+export default function SuaAgenda() {
+  const { cronogramas, avaliacoes, cronogramaSelecionado, setCronogramaSelecionado } =
+    useContext(CronogramaContext);
+
+  const [nomeUsuario, setNomeUsuario] = useState("Usuário");
+  const [modalVisivel, setModalVisivel] = useState(false);
+  const [itemEditando, setItemEditando] = useState<any>(null);
+  const [nome, setNome] = useState("");
+  const [descricao, setDescricao] = useState("");
+  const [grau, setGrau] = useState("");
+
+  const router = useRouter();
+  const cronogramaAtual = cronogramas[cronogramaSelecionado];
+
+  useEffect(() => {
+    const user = auth.currentUser;
+    setNomeUsuario(user?.displayName || "Usuário");
+  }, []);
+
+  const abrirEdicao = (item: any) => {
+    setItemEditando(item);
+    setNome(item.titulo || item.nome || "");
+    setDescricao(item.observacoes || item.descricao || "");
+    setGrau(item.grau || "");
+    setModalVisivel(true);
+  };
+
+  const salvarEdicao = () => {
+    if (itemEditando) {
+      itemEditando.titulo = nome;
+      itemEditando.observacoes = descricao;
+      itemEditando.grau = grau;
+    }
+    setModalVisivel(false);
+  };
+
+  return (
+    <ImageBackground
+      source={require("../../../assets/images/agenda2.png")}
+      style={styles.background}
+      resizeMode="cover"
+    >
+      <View style={styles.overlay} />
+
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.voltarBotao}>
+            <Text style={styles.voltarTexto}>←</Text>
+          </TouchableOpacity>
+          <View style={styles.headerTextos}>
+            <View style={styles.nomeDataContainer}>
+              <Text style={styles.userName}>Olá {nomeUsuario} 👋</Text>
+              <Text style={styles.dataAtual}>{dataAtual}</Text>
+            </View>
+            <Text style={styles.subTitulo}>
+              Segue o cronograma da sua semana de {cronogramaSelecionado}.
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.listaCategorias}>
+          {["ENEM", "SSA1", "SSA2", "SSA3", "Avaliação Escolar"].map((item) => (
+            <TouchableOpacity key={item} onPress={() => setCronogramaSelecionado(item as CronogramaKey)}>
+              <Text
+                style={[
+                  styles.categoriaTexto,
+                  cronogramaSelecionado === item && styles.categoriaSelecionada,
+                ]}
+              >
+                {item}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <ScrollView contentContainerStyle={styles.scroll}>
+          {cronogramaSelecionado === "Avaliação Escolar" ? (
+            <>
+              {avaliacoes.length === 0 ? (
+                <Text style={styles.semConteudoTextoDestacado}>
+                  Nenhuma avaliação cadastrada. Vá até a tela de configuração para adicionar.
+                </Text>
+              ) : (
+                avaliacoes.map((avaliacao, idx) => (
+                  <View key={idx} style={styles.card}>
+                    <Text style={styles.cardTitulo}>{avaliacao.titulo}</Text>
+
+                    {avaliacao.grau && <Text style={styles.cardInfo}>Grau: {avaliacao.grau}</Text>}
+                    {avaliacao.observacoes && (
+                      <Text style={styles.cardInfo}>Descrição: {avaliacao.observacoes}</Text>
+                    )}
+                    {avaliacao.nota != null && <Text style={styles.cardInfo}>⭐ Nota: {avaliacao.nota}</Text>}
+
+                    <TouchableOpacity
+                      style={styles.botaoEditar}
+                      onPress={() => abrirEdicao(avaliacao)}
+                    >
+                      <Text style={styles.textoEditar}>Editar</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))
+              )}
+            </>
+          ) : cronogramaAtual && cronogramaAtual.length > 0 ? (
+            cronogramaAtual.map((dia, idx) => (
+              <View key={idx} style={styles.card}>
+                <Text style={styles.cardTituloMaior}>{dia.dia}</Text>
+                {dia.materias.length === 0 ? (
+                  <Text style={styles.semConteudoTextoDestacado}>Nenhuma matéria cadastrada</Text>
+                ) : (
+                  dia.materias.map((materia, mIdx) => (
+                    <View key={mIdx} style={styles.materia}>
+                      <View style={styles.materiaHeader}>
+                        <View style={[styles.prioridadeBola, { backgroundColor: materia.prioridade === "Alta" ? "#e53935" : materia.prioridade === "Média" ? "#fdd835" : "#43a047" }]} />
+                        <Text style={styles.materiaNome}>{materia.nome}</Text>
+                      </View>
+                      <Text style={styles.cardInfo}>🕑 {materia.horario}</Text>
+                      <Text style={styles.cardInfo}>{materia.descricao}</Text>
+
+                      <TouchableOpacity
+                        style={styles.botaoEditar}
+                        onPress={() => abrirEdicao(materia)}
+                      >
+                        <Text style={styles.textoEditar}>Editar</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))
+                )}
+              </View>
+            ))
+          ) : (
+            <Text style={styles.semConteudoTextoDestacado}>Nenhum cronograma cadastrado ainda.</Text>
+          )}
+        </ScrollView>
+
+        <Modal visible={modalVisivel} transparent animationType="slide">
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitulo}>Editar Item</Text>
+
+              <TextInput
+                style={styles.input}
+                value={nome}
+                onChangeText={setNome}
+                placeholder="Título"
+              />
+              <TextInput
+                style={styles.input}
+                value={descricao}
+                onChangeText={setDescricao}
+                placeholder="Descrição"
+              />
+              <TextInput
+                style={styles.input}
+                value={grau}
+                onChangeText={setGrau}
+                placeholder="Grau (1º, 2º, 3º ano)"
+              />
+
+              <View style={styles.modalBotoes}>
+                <TouchableOpacity
+                  style={styles.modalBotaoCancelar}
+                  onPress={() => setModalVisivel(false)}
+                >
+                  <Text style={styles.modalBotaoTexto}>Cancelar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.modalBotaoSalvar}
+                  onPress={salvarEdicao}
+                >
+                  <Text style={styles.modalBotaoTexto}>Salvar</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      </SafeAreaView>
+    </ImageBackground>
+  );
+}
+
+const styles = StyleSheet.create({
+  background: { flex: 1 },
+  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(21, 76, 76, 0.6)" },
+  safeArea: { flex: 1 },
+
+  header: { flexDirection: "row", alignItems: "flex-start", gap: 12, padding: 16 },
+  voltarBotao: { paddingTop: 4 },
+  voltarTexto: { fontSize: 28, color: "white", fontWeight: "bold" },
+
+  headerTextos: { flex: 1 },
+  nomeDataContainer: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 4 },
+  userName: { fontSize: 22, fontWeight: "bold", color: "white" },
+  dataAtual: { fontSize: 16, color: "white" },
+  subTitulo: { fontSize: 18, fontWeight: "bold", color: "white", marginBottom: 4 },
+
+  listaCategorias: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginHorizontal: 16, marginBottom: 8 },
+  categoriaTexto: { fontSize: 14, color: "white", paddingVertical: 4, paddingHorizontal: 8, borderRadius: 6, backgroundColor: "#143230" },
+  categoriaSelecionada: { backgroundColor: "#21A39B", fontWeight: "bold" },
+
+  scroll: { padding: 16 },
+  card: { marginBottom: 16, backgroundColor: "#0E403D", padding: 14, borderRadius: 12, elevation: 3, borderWidth: 1, borderColor: "#21A39B" },
+  cardTitulo: { fontSize: 18, fontWeight: "bold", marginBottom: 6, color: "white" },
+  cardTituloMaior: { fontSize: 20, fontWeight: "bold", marginBottom: 8, color: "#fff" },
+  cardInfo: { fontSize: 15, color: "white", marginBottom: 4 },
+  materia: { marginBottom: 12, borderTopWidth: 1, borderTopColor: "#ddd", paddingTop: 8 },
+  materiaHeader: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 },
+  prioridadeBola: { width: 12, height: 12, borderRadius: 6 },
+  materiaNome: { fontSize: 16, fontWeight: "600", color: "white" },
+  botaoEditar: { marginTop: 8, backgroundColor: "#143230", paddingVertical: 8, borderRadius: 8, alignItems: "center", alignSelf: "flex-end", paddingHorizontal: 16 },
+  textoEditar: { color: "white", fontWeight: "bold" },
+
+  semConteudoTextoDestacado: { fontSize: 18, fontWeight: "bold", color: "#ffffffff", textAlign: "center", marginVertical: 30 },
+
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center" },
+  modalContent: { width: "85%", backgroundColor: "white", padding: 20, borderRadius: 12 },
+  modalTitulo: { fontSize: 20, fontWeight: "bold", marginBottom: 12, color: "#154C4C" },
+  input: { borderWidth: 1, borderColor: "#21A39B", borderRadius: 8, padding: 10, marginBottom: 10 },
+  modalBotoes: { flexDirection: "row", justifyContent: "flex-end", gap: 12, marginTop: 10 },
+  modalBotaoCancelar: { paddingVertical: 8, paddingHorizontal: 14, backgroundColor: "#888", borderRadius: 6 },
+  modalBotaoSalvar: { paddingVertical: 8, paddingHorizontal: 14, backgroundColor: "#21A39B", borderRadius: 6 },
+  modalBotaoTexto: { color: "white", fontWeight: "bold" },
+});

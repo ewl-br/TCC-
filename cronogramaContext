@@ -1,0 +1,119 @@
+import React, { createContext, useState, ReactNode } from 'react';
+
+export type Materia = {
+  nome: string;
+  prioridade: 'Alta' | 'Média' | 'Baixa';
+  grau?: '1° ano' | '2° ano' | '3° ano';
+  horario: string;
+  descricao: string;
+};
+
+export type DiaCronograma = {
+  dia: string;
+  materias: Materia[];
+};
+
+export type CronogramaKey = 'ENEM' | 'SSA1' | 'SSA2' | 'SSA3' | 'Avaliação Escolar';
+
+export type Avaliacao = {
+  titulo: string;
+  grau?: '1° ano' | '2° ano' | '3° ano';
+  data: string;
+  nota?: number | null;
+  observacoes?: string;
+};
+
+const HORARIO_REGEX = /^((?:[01]\d|2[0-3])):([0-5]\d)\s-\s((?:[01]\d|2[0-3])):([0-5]\d)$/;
+
+export const isHorarioValido = (valor: string): boolean => {
+  if (valor === 'Dia Livre') return true;
+  return HORARIO_REGEX.test(valor);
+};
+
+export const formatarHorario = (inicio: string, fim: string): string => {
+  const norm = (s: string) => {
+    const [h = '', m = ''] = s.split(':');
+    return `${h.padStart(2, '0')}:${m.padStart(2, '0')}`;
+  };
+  const str = `${norm(inicio)} - ${norm(fim)}`;
+  if (!isHorarioValido(str)) {
+    throw new Error('Horário inválido. Use "HH:MM - HH:MM" (00–23 para hora, 00–59 para min).');
+  }
+  return str;
+};
+
+type CronogramaContextType = {
+  cronogramas: Record<CronogramaKey, DiaCronograma[]>;
+  avaliacoes: Avaliacao[];
+  cronogramaSelecionado: CronogramaKey;
+  setCronogramaSelecionado: (key: CronogramaKey) => void;
+  setCronogramas: React.Dispatch<React.SetStateAction<Record<CronogramaKey, DiaCronograma[]>>>;
+  setAvaliacoes: React.Dispatch<React.SetStateAction<Avaliacao[]>>;
+  atualizarMateria: (
+    cronograma: CronogramaKey,
+    dia: string,
+    materiaIndex: number,
+    patch: Partial<Materia>
+  ) => void;
+};
+
+export const CronogramaContext = createContext<CronogramaContextType>({} as CronogramaContextType);
+
+export const CronogramaProvider = ({ children }: { children: ReactNode }) => {
+  const [cronogramaSelecionado, setCronogramaSelecionado] = useState<CronogramaKey>('ENEM');
+
+  const [cronogramas, setCronogramas] = useState<Record<CronogramaKey, DiaCronograma[]>>({
+    ENEM: [],
+    SSA1: [],
+    SSA2: [],
+    SSA3: [],
+    'Avaliação Escolar': [],
+  });
+
+  const [avaliacoes, setAvaliacoes] = useState<Avaliacao[]>([]);
+
+  const atualizarMateria: CronogramaContextType['atualizarMateria'] = (
+    cronograma,
+    dia,
+    materiaIndex,
+    patch
+  ) => {
+    setCronogramas(prev => {
+      const atualizado = prev[cronograma].map(diaItem => {
+        if (diaItem.dia !== dia) return diaItem;
+
+        const novasMaterias = diaItem.materias.map((m, idx) => {
+          if (idx !== materiaIndex) return m;
+
+          let proximo = { ...m, ...patch };
+          if (typeof patch.horario === 'string' && !isHorarioValido(patch.horario)) {
+            console.warn('[atualizarMateria] Horário inválido. Alteração ignorada:', patch.horario);
+            proximo.horario = m.horario;
+          }
+
+          return proximo;
+        });
+
+        return { ...diaItem, materias: novasMaterias };
+      });
+
+      return { ...prev, [cronograma]: atualizado };
+    });
+  };
+
+  return (
+    <CronogramaContext.Provider
+      value={{
+        cronogramas,
+        avaliacoes,
+        cronogramaSelecionado,
+        setCronogramaSelecionado,
+        setCronogramas,
+        setAvaliacoes,
+        atualizarMateria,
+      }}
+    >
+      {children}
+    </CronogramaContext.Provider>
+  );
+};

@@ -1,16 +1,16 @@
-let API_URL;
+export async function fetchEnem(materias) {
+  try {
+    const response = await fetch(`${API_URL}/enem`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ materias }),
+    });
 
-if (Platform.OS === "android") {
-  // Emulador Android
-  API_URL = "http://10.0.2.2:5000";
-} else if (Platform.OS === "ios") {
-  // iOS simulador
-  API_URL = "http://127.0.0.1:5000";
-} else {
-  // Celular físico com Expo Go
-  const { manifest } = Constants;
-  const host = manifest.debuggerHost.split(":")[0]; // pega IP do PC na rede
-  API_URL = `http://${host}:5000`;
+    if (!response.ok) throw new Error("Erro na resposta do servidor");
+
+    return await response.json();
+  } catch (error) {
+    console.error("Erro no fetch ENEM:", error);
+    throw error;
+  }
 }
-
-console.log("API_URL detectada:", API_URL);

@@ -1,0 +1,30 @@
+// Defina a URL da API Flask
+const API_URL =
+  Platform.OS === "android"
+    ? "http://10.0.2.2:5000" // Android Emulador usa 10.0.2.2 para acessar localhost do PC
+    : "http://127.0.0.1:5000"; // iOS Simulador pode usar localhost
+
+// Se for celular físico com Expo Go, troque pelo IP da sua máquina
+// Exemplo: const API_URL = "http://192.168.1.10:5000";
+
+export async function fetchEnem(dados) {
+  try {
+    const response = await fetch(`${API_URL}/enem`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(dados),
+    });
+
+    if (!response.ok) {
+      throw new Error("Erro na resposta do servidor");
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Erro no fetch ENEM:", error);
+    throw error;
+  }
+}

@@ -1,13 +1,33 @@
-from senha import API_KEY
 from flask import Flask, request, jsonify
-from openai import OpenAI
 from flask_cors import CORS
+import mysql.connector
+from openai import OpenAI
+from key import API_KEY  # chave OpenAI
 import json
+import requests
 
-client = OpenAI(api_key=API_KEY)
 app = Flask(__name__)
 CORS(app)
 
+# Conexão com MySQL
+conexao_BD= {
+    "host": "localhost",
+    "user": "root",
+    "password": "kkcobens",
+    "database": "estudamais"
+}
+
+#IA
+client = OpenAI(api_key=API_KEY)
+body_menssagens = {
+   "model": "gpt-5",
+   "messages": [
+        {
+             "role": "user",
+             "content": "Agora atue como minha assistente e forneça todo seu conhecimento."
+        }
+    ]
+}
 # outras funçoes(da ia e dos ssa)
 
 def gerar_plano_com_ia(materias, prova):
@@ -51,12 +71,83 @@ def gerar_resposta_ssa(nome, lista_assuntos):
         "resposta_ia": conteudo_ia
     })
 
-# rotas(Enem,ssa1,ssa2,ss3 e avaliação escolar)
 
 @app.route("/")
 def home():
-    return "API de Plano de Estudos para ENEM,SSA1,SSA2,SSA3 e avaliação escolar acesse as urls /enem,/ssa1, /ssa2, /ssa3 ou /avaliacao"
+    return "API funcionando. Acesse /openai para ver os modelos ou /resposta para ver uma resposta da IA."
 
+# Listar agenda
+@app.route("/agenda")
+def agenda():
+    conn = mysql.connector.connect(**conexao_BD)
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM materias")
+    materias = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return jsonify(materias)
+
+# Adicionar matéria
+@app.route("/adicionar", methods=["POST","GET"])
+def adicionar():
+    data = request.get_json()
+    nome = data["nome"]
+    professor = data["professor"]
+    descricao = data["descricao"]
+
+    conn = mysql.connector.connect(**conexao_BD)
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO materias (nome, professor, descricao) VALUES (%s,%s,%s)",
+                   (nome, professor, descricao))
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return jsonify({"mensagem": "Matéria adicionada com sucesso!"})
+
+
+#gerar a genda
+@app.route("/gerar_agenda", methods=["POST","GET"])
+def gerar_agenda():
+    if request.method == "GET":
+        return jsonify({
+            'materias': "nenhuma materia recebida",
+            'horarioInicio': "nenhum horario inicio recebido",
+            'horarioFim': "nenhum horario fim recebido"})
+    
+    data = request.get_json()
+    horarioInicio = data.get("horarioinicio", [])
+    horarioFim = data.get("horariofim", [])
+    materias = data.get("materias", [])
+
+    
+    
+    messages = [{"role": "user", "content": """ quero que você crie um cronograma completo já organizado com os temas intercalados,
+                    entregue em blocos semanais. Informações como: assuntos que deverão ser estudados, intervalo de datas até o dia da prova e intervalo de horas de estudo por dia, serão especificados exatamente no final do código
+
+                    envie a resposta seguindo exatamente esse modelo, no formato json:
+
+                    assuntos do dia: 
+                    dia do estudo: 
+                    horario de estudar cada assunto: 
+                   
+                    utilize esses dados para ajudar a associar o escrito acima (nada disso deve aparecer e nem será usado,
+                    é apenas um exemplo para ajudar, a estrutura desse exemplo deve ser seguido a risca):
+                    
+                    física (geradores); historia (ditadura no Brasil).
+                    28/09; 30/10
+                    19:00 até 20:00; 20:30 até 21:00
+
+                    informações de materias que deverão ser estudadas, intervalo de datas até o dia da prova (horario inicio e horario fim) e intervalo de horas de estudo por dia (seguindo essa mesma ordem): """ + "; ".join(materias) + f"; {horarioInicio} até {horarioFim} "
+                    }]
+    
+    completion = client.chat.completions.create(
+        model="gpt-5",
+        messages=messages
+    )
+    resposta = completion.choices[0].message.content
+    return jsonify({"agenda": resposta})
+    
+#rotas do enem,ssa,ssa1,ssa2,ssa3 e avaliação escolar
 @app.route("/enem", methods=["POST", "GET"])
 def enem():
     #Entrada
@@ -86,8 +177,6 @@ def enem():
         "assuntos_sugeridos": conteudo_ia.get("assuntos_sugeridos", {}),
         "resposta_completa": conteudo_ia
     })
-
-#Rotas SSA usam a função genérica
 @app.route("/ssa1", methods=["POST", "GET"])
 def ssa1():
     if request.method == "POST":
@@ -169,7 +258,6 @@ def ssa3():
         "assuntos_sugeridos": conteudo_ia.get("assuntos_sugeridos", {}),
         "resposta_completa": conteudo_ia
     })
-    
 @app.route("/avaliacao", methods=["POST", "GET"])
 def avaliacao():
     if request.method == "POST":
@@ -189,7 +277,5 @@ def avaliacao():
         "resposta_ia": conteudo_ia
     })
 
-#Função para SSA 
-
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000,debug=True)

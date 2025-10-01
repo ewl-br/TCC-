@@ -8,6 +8,7 @@ import {
   ImageBackground,
   Modal,
   TextInput,
+  ActivityIndicator,
 } from "react-native";
 import { CronogramaContext, CronogramaKey } from "../../../context/CronogramaContext";
 import { useRouter } from "expo-router";
@@ -21,7 +22,7 @@ const dataAtual = new Intl.DateTimeFormat("pt-BR", {
 }).format(new Date());
 
 export default function SuaAgenda() {
-  const { cronogramas, avaliacoes, cronogramaSelecionado, setCronogramaSelecionado } =
+  const { cronogramas, setCronogramas, avaliacoes, cronogramaSelecionado, setCronogramaSelecionado } =
     useContext(CronogramaContext);
 
   const [nomeUsuario, setNomeUsuario] = useState("Usuário");
@@ -31,6 +32,9 @@ export default function SuaAgenda() {
   const [descricao, setDescricao] = useState("");
   const [grau, setGrau] = useState("");
 
+  const [loading, setLoading] = useState(false);
+  const [erro, setErro] = useState("");
+
   const router = useRouter();
   const cronogramaAtual = cronogramas[cronogramaSelecionado];
 
@@ -38,6 +42,66 @@ export default function SuaAgenda() {
     const user = auth.currentUser;
     setNomeUsuario(user?.displayName || "Usuário");
   }, []);
+
+  // FETCH API
+ useEffect(() => {
+  const fetchAgenda = async () => {
+    setLoading(true);
+    setErro("");
+    try {
+      const categorias = ["ENEM", "SSA1", "SSA2", "SSA3"];
+
+      const novosCronogramas: any = {};
+
+      for (const cat of categorias) {
+        const res = await fetch(`http://172.20.10.3:5000/gerar_agenda?tipo=${cat}`);
+        if (!res.ok) throw new Error(`Erro ao buscar ${cat}: ${res.status}`);
+        const data = await res.json();
+
+        const listaDias: any[] = [];
+
+        if (data.agenda && Array.isArray(data.agenda)) {
+          data.agenda.forEach((semana: any[]) => {
+            if (Array.isArray(semana)) {
+              semana.forEach((dia: any) => {
+                if (
+                  dia &&
+                  Array.isArray(dia["assuntos do dia"]) &&
+                  Array.isArray(dia["horario de estudar cada assunto"])
+                ) {
+                  listaDias.push({
+                    dia: dia["dia do estudo"],
+                    materias: dia["assuntos do dia"].map((nome: string, idx: number) => ({
+                      nome,
+                      horario: dia["horario de estudar cada assunto"][idx] || "",
+                      descricao: "",
+                      prioridade: "Média",
+                    })),
+                  });
+                }
+              });
+            }
+          });
+        }
+
+        novosCronogramas[cat] = listaDias;
+      }
+
+      setCronogramas((prev) => ({
+        ...prev,
+        ...novosCronogramas,
+      }));
+    } catch (err: any) {
+      console.log("Erro ao buscar agenda:", err);
+      setErro("Não foi possível carregar as agendas.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchAgenda();
+}, [setCronogramas]);
+
 
   const abrirEdicao = (item: any) => {
     setItemEditando(item);
@@ -96,7 +160,11 @@ export default function SuaAgenda() {
         </View>
 
         <ScrollView contentContainerStyle={styles.scroll}>
-          {cronogramaSelecionado === "Avaliação Escolar" ? (
+          {loading ? (
+            <ActivityIndicator size="large" color="#21A39B" style={{ marginTop: 50 }} />
+          ) : erro ? (
+            <Text style={styles.semConteudoTextoDestacado}>{erro}</Text>
+          ) : cronogramaSelecionado === "Avaliação Escolar" ? (
             <>
               {avaliacoes.length === 0 ? (
                 <Text style={styles.semConteudoTextoDestacado}>
@@ -109,7 +177,13 @@ export default function SuaAgenda() {
 
                     {avaliacao.grau && <Text style={styles.cardInfo}>Grau: {avaliacao.grau}</Text>}
                     {avaliacao.observacoes && (
-                      <Text style={styles.cardInfo}>Descrição: {avaliacao.observacoes}</Text>
+                      <View style={{ marginTop: 4 }}>
+                      {avaliacao.observacoes.split("|").map((parte, i) => (
+                        <Text key={i} style={styles.cardInfo}>
+                        {parte.trim()}
+                         </Text>
+                       ))}
+                     </View>
                     )}
                     {avaliacao.nota != null && <Text style={styles.cardInfo}>⭐ Nota: {avaliacao.nota}</Text>}
 
@@ -133,7 +207,19 @@ export default function SuaAgenda() {
                   dia.materias.map((materia, mIdx) => (
                     <View key={mIdx} style={styles.materia}>
                       <View style={styles.materiaHeader}>
-                        <View style={[styles.prioridadeBola, { backgroundColor: materia.prioridade === "Alta" ? "#e53935" : materia.prioridade === "Média" ? "#fdd835" : "#43a047" }]} />
+                        <View
+                          style={[
+                            styles.prioridadeBola,
+                            {
+                              backgroundColor:
+                                materia.prioridade === "Alta"
+                                  ? "#e53935"
+                                  : materia.prioridade === "Média"
+                                  ? "#fdd835"
+                                  : "#43a047",
+                            },
+                          ]}
+                        />
                         <Text style={styles.materiaNome}>{materia.nome}</Text>
                       </View>
                       <Text style={styles.cardInfo}>🕑 {materia.horario}</Text>

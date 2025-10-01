@@ -1,0 +1,281 @@
+# from flask import Flask, request, jsonify
+# from flask_cors import CORS
+# import mysql.connector
+# from openai import OpenAI
+# from key import API_KEY  # chave OpenAI
+# import json
+# import requests
+
+# app = Flask(__name__)
+# CORS(app)
+
+# # Conexão com MySQL
+# conexao_BD= {
+#     "host": "localhost",
+#     "user": "root",
+#     "password": "kkcobens",
+#     "database": "estudamais"
+# }
+
+# #IA
+# client = OpenAI(api_key=API_KEY)
+# body_menssagens = {
+#    "model": "gpt-5",
+#    "messages": [
+#         {
+#              "role": "user",
+#              "content": "Agora atue como minha assistente e forneça todo seu conhecimento."
+#         }
+#     ]
+# }
+# # outras funçoes(da ia e dos ssa)
+
+# def gerar_plano_com_ia(materias, prova):
+#     prompt = f"""
+#     Estou criando um plano de estudos para {prova}.
+#     O usuário escolheu os materias: {', '.join(materias)}.
+#     Gere uma lista de assuntos para revisar e um plano de estudos simples com horários.
+#     Responda no formato JSON com as chaves:
+#     - "plano_de_estudo": lista de strings com os horários
+#     - "assuntos_sugeridos": dicionário onde cada tema é uma lista de assuntos
+#     """
+
+#     try:
+#         response = client.chat.completions.create(
+#             model="gpt-5",
+#             messages=[
+#                 {"role": "system", "content": f"Você é uma assistente pedagógica especialista em {prova}."},
+#                 {"role": "user", "content": prompt}
+#             ],
+#             response_format={"type": "json_object"}  
+#         )
+#         conteudo = response.choices[0].message.content
+#         return json.loads(conteudo) 
+#     except Exception as e:
+#         return {"erro": f"Falha ao gerar resposta da IA: {str(e)}"}
+    
+# def gerar_resposta_ssa(nome, lista_assuntos):
+#     if request.method == "POST":
+#         dados = request.get_json() or {}
+#         materias = dados.get("materias", [])
+#     else:
+#         materias = request.args.getlist("materias")
+
+#     conteudo_ia = gerar_plano_com_ia(materias, nome)
+#     filtrados = [item for item in lista_assuntos if not materias or item["area"] in materias]
+
+#     return jsonify({
+#         "materias_recebidos": materias,
+#         "plano_de_estudo": [f"{item['area']} - 19:00 às 20:00" for item in filtrados],
+#         "assuntos_sugeridos": filtrados,
+#         "resposta_ia": conteudo_ia
+#     })
+
+
+# @app.route("/")
+# def home():
+#     return "API funcionando. Acesse /openai para ver os modelos ou /resposta para ver uma resposta da IA."
+
+# # Listar agenda
+# @app.route("/agenda")
+# def agenda():
+#     conn = mysql.connector.connect(**conexao_BD)
+#     cursor = conn.cursor(dictionary=True)
+#     cursor.execute("SELECT * FROM materias")
+#     materias = cursor.fetchall()
+#     cursor.close()
+#     conn.close()
+#     return jsonify(materias)
+
+# # Adicionar matéria
+# @app.route("/adicionar", methods=["POST","GET"])
+# def adicionar():
+#     data = request.get_json()
+#     nome = data["nome"]
+#     professor = data["professor"]
+#     descricao = data["descricao"]
+
+#     conn = mysql.connector.connect(**conexao_BD)
+#     cursor = conn.cursor()
+#     cursor.execute("INSERT INTO materias (nome, professor, descricao) VALUES (%s,%s,%s)",
+#                    (nome, professor, descricao))
+#     conn.commit()
+#     cursor.close()
+#     conn.close()
+#     return jsonify({"mensagem": "Matéria adicionada com sucesso!"})
+
+
+# #gerar a genda
+# @app.route("/gerar_agenda", methods=["POST","GET"])
+# def gerar_agenda():
+#     if request.method == "GET":
+#         return jsonify({
+#             'materias': "nenhuma materia recebida",
+#             'horarioInicio': "nenhum horario inicio recebido",
+#             'horarioFim': "nenhum horario fim recebido"})
+    
+#     data = request.get_json()
+#     horarioInicio = data.get("horarioinicio", [])
+#     horarioFim = data.get("horariofim", [])
+#     materias = data.get("materias", [])
+
+    
+    
+#     messages = [{"role": "user", "content": """ quero que você crie um cronograma completo já organizado com os temas intercalados,
+#                     entregue em blocos semanais. Informações como: assuntos que deverão ser estudados, intervalo de datas até o dia da prova e intervalo de horas de estudo por dia, serão especificados exatamente no final do código
+
+#                     envie a resposta seguindo exatamente esse modelo, no formato json:
+
+#                     assuntos do dia: 
+#                     dia do estudo: 
+#                     horario de estudar cada assunto: 
+                   
+#                     utilize esses dados para ajudar a associar o escrito acima (nada disso deve aparecer e nem será usado,
+#                     é apenas um exemplo para ajudar, a estrutura desse exemplo deve ser seguido a risca):
+                    
+#                     física (geradores); historia (ditadura no Brasil).
+#                     28/09; 30/10
+#                     19:00 até 20:00; 20:30 até 21:00
+
+#                     informações de materias que deverão ser estudadas, intervalo de datas até o dia da prova (horario inicio e horario fim) e intervalo de horas de estudo por dia (seguindo essa mesma ordem): """ + "; ".join(materias) + f"; {horarioInicio} até {horarioFim} "
+#                     }]
+    
+#     completion = client.chat.completions.create(
+#         model="gpt-5",
+#         messages=messages
+#     )
+#     resposta = completion.choices[0].message.content
+#     return jsonify({"agenda": resposta})
+    
+# #rotas do enem,ssa,ssa1,ssa2,ssa3 e avaliação escolar
+# @app.route("/enem", methods=["POST", "GET"])
+# def enem():
+#     #Entrada
+#     if request.method == "POST":
+#         dados = request.get_json() or {}
+#         materias = dados.get("materias", [])
+#     else:
+#         materias = request.args.getlist("materias")
+
+#     if not materias:
+#         return jsonify({"erro": "Nenhum materias selecionado."}), 400
+
+#     #Chamar a IA
+#     conteudo_ia = gerar_plano_com_ia(materias, "ENEM")
+
+#     # Garante que sempre retorne um dicionário
+#     if not isinstance(conteudo_ia, dict):
+#         return jsonify({
+#             "erro": "A IA não retornou no formato esperado.",
+#             "resposta_bruta": conteudo_ia
+#         }), 500
+
+#     #retorno da IA
+#     return jsonify({
+#         "materias_recebidos": materias,
+#         "plano_de_estudo": conteudo_ia.get("plano_de_estudo", []),
+#         "assuntos_sugeridos": conteudo_ia.get("assuntos_sugeridos", {}),
+#         "resposta_completa": conteudo_ia
+#     })
+# @app.route("/ssa1", methods=["POST", "GET"])
+# def ssa1():
+#     if request.method == "POST":
+#         dados = request.get_json() or {}
+#         materias = dados.get("materias",[])
+#     else:
+#         materias = request.args.getlist("materias")
+#     if not materias:
+#         return jsonify("nenhuma materias escolhida")
+    
+#     conteudo_ia = gerar_plano_com_ia(materias,"ssa1")
+
+#     if not isinstance(conteudo_ia, dict):
+#         return jsonify({
+#             "erro": "A IA não retornou no formato esperado.",
+#             "resposta_bruta": conteudo_ia
+#         }), 500
+
+#     #retorno da IA
+#     return jsonify({
+#         "materias_recebidos": materias,
+#         "plano_de_estudo": conteudo_ia.get("plano_de_estudo", []),
+#         "assuntos_sugeridos": conteudo_ia.get("assuntos_sugeridos", {}),
+#         "resposta_completa": conteudo_ia
+#     })
+
+# @app.route("/ssa2", methods=["POST", "GET"])
+# def ssa2():
+#     if request.method == "POST":
+#         dados = request.get_json() or {}
+#         materias = dados.get("materias",[])
+#     else:
+#         materias = request.args.getlist("materias")
+#     if not materias:
+#         return jsonify("nenhuma materias escolhida")
+    
+#     conteudo_ia = gerar_plano_com_ia(materias ,"ssa1")
+    
+#     if not isinstance(conteudo_ia, dict):
+#         return jsonify({
+#             "erro": "A IA não retornou no formato esperado.",
+#             "resposta_bruta": conteudo_ia
+#         }), 500
+
+#     #retorno da IA
+#     return jsonify({
+#         "materias_recebidos": materias,
+#         "plano_de_estudo": conteudo_ia.get("plano_de_estudo", []),
+#         "assuntos_sugeridos": conteudo_ia.get("assuntos_sugeridos", {}),
+#         "resposta_completa": conteudo_ia
+#     })
+
+
+# @app.route("/ssa3", methods=["POST", "GET"])
+# def ssa3():
+#     if request.method == "POST":
+#         dados = request.get_json() or {}
+#         materias = dados.get("materias", [])
+#     else:
+#         materias = request.args.getlist("materias")
+
+#     if not materias:
+#         return jsonify({"erro": "Nenhum materias selecionado."}), 400
+
+#     #Chamar a IA
+#     conteudo_ia = gerar_plano_com_ia(materias, "ENEM")
+
+#     # Garante que sempre retorne um dicionário
+#     if not isinstance(conteudo_ia, dict):
+#         return jsonify({
+#             "erro": "A IA não retornou no formato esperado.",
+#             "resposta_bruta": conteudo_ia
+#         }), 500
+
+#     #retorno da IA
+#     return jsonify({
+#         "materias_recebidos": materias,
+#         "plano_de_estudo": conteudo_ia.get("plano_de_estudo", []),
+#         "assuntos_sugeridos": conteudo_ia.get("assuntos_sugeridos", {}),
+#         "resposta_completa": conteudo_ia
+#     })
+# @app.route("/avaliacao", methods=["POST", "GET"])
+# def avaliacao():
+#     if request.method == "POST":
+#         dados = request.get_json() or {}
+#         materias = dados.get("materias", [])
+#     else:
+#         materias = request.args.getlist("materias")
+
+#     if not materias:
+#         return jsonify({"erro": "Nenhuma matéria selecionada."}), 400
+
+#     conteudo_ia = gerar_plano_com_ia(materias, "Avaliação Escolar")
+
+#     return jsonify({
+#         "materias_recebidas": materias,
+#         "plano_de_estudo": [f"{materia} - 19:00 às 20:00" for materia in materias],
+#         "resposta_ia": conteudo_ia
+#     })
+
+# if __name__ == "__main__":
+#     app.run(host="0.0.0.0", port=5000,debug=True)

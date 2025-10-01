@@ -10,27 +10,35 @@ export default function Login() {
   const [senha, setSenha] = React.useState('');
   const [loading, setLoading] = React.useState(false);
 
-  const login = async () => {
-    if (!email || !senha) {
-      Alert.alert('Atenção', 'Preencha todos os campos');
-      return;
-    }
+ const login = async () => {
+  if (!email || !senha) {
+    Alert.alert('Atenção', 'Preencha todos os campos');
+    return;
+  }
 
-    setLoading(true);
+  setLoading(true);
 
-    try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, senha);
-      const user = userCredential.user;
-      console.log('✅ Usuário logado:', user.email);
-      router.replace('/(tabs)/funcoes');
-    } catch (error: unknown) {
-      const mensagem = error instanceof Error ? error.message : 'Erro desconhecido';
-      console.error('❌ Erro no login:', mensagem);
+  try {
+    const userCredential = await signInWithEmailAndPassword(auth, email, senha);
+    const user = userCredential.user;
+    console.log('✅ Usuário logado:', user.email);
+    router.replace('/(tabs)/funcoes');
+  } catch (error: any) {
+    if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
+      console.warn('Tentativa de login inválida:', error.code);
       Alert.alert('Erro ao logar', 'E-mail ou senha inválidos');
-    } finally {
-      setLoading(false);
+    } else if (error.code === 'auth/invalid-email') {
+      console.warn('E-mail em formato inválido:', error.code);
+      Alert.alert('Erro ao logar', 'Formato de e-mail inválido');
+    } else {
+      console.error('Erro inesperado no login:', error);
+      Alert.alert('Erro inesperado', 'Não foi possível logar. Tente novamente mais tarde.');
     }
-  };
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <View style={estilos.tela}>

@@ -97,59 +97,70 @@ export default function SSA() {
     }
   };
 
-  const salvarSSA = async () => {
-    if (!categoria) {
-      setMensagemAviso('Preencha todos os campos antes de salvar.');
-      setModalAviso(true);
-      return;
-    }
+ const salvarSSA = async () => {
+  if (!categoria) {
+    setMensagemAviso('Preencha todos os campos antes de salvar.');
+    setModalAviso(true);
+    return;
+  }
 
-    const materiasSelecionadas = Object.values(areas).flatMap(a => a.materias.filter(m => m.selecionada));
-    if (materiasSelecionadas.length === 0) {
-      setMensagemAviso('Selecione pelo menos uma matéria.');
-      setModalAviso(true);
-      return;
-    }
+  const materiasSelecionadas = Object.values(areas)
+    .flatMap(a => a.materias.filter(m => m.selecionada))
+    .map(m => ({
+      nome: m.nome,
+      prioridade: m.prioridade,
+      descricao: `` 
+    }));
 
-    if (!horarioInicio || !horarioFim) {
-      setMensagemAviso('Preencha os horários de início e fim.');
-      setModalAviso(true);
-      return;
-    }
+  if (materiasSelecionadas.length === 0) {
+    setMensagemAviso('Selecione pelo menos uma matéria.');
+    setModalAviso(true);
+    return;
+  }
 
-    setLoading(true);
-    const payload = { categoria, horarioInicio, horarioFim, materias: materiasSelecionadas };
+  if (!horarioInicio || !horarioFim) {
+    setMensagemAviso('Preencha os horários de início e fim.');
+    setModalAviso(true);
+    return;
+  }
 
-    try {
-      const response = await fetch('http://localhost:8081', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
+  setLoading(true);
 
-      if (!response.ok) {
-        throw new Error(`Erro ao enviar: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log('Resposta da API:', data);
-
-      setModalSucesso(true);
-
-      setTimeout(() => {
-        router.back();
-      }, 100);
-
-    } catch (err: any) {
-      console.error('Erro no fetch:', err);
-      setMensagemAviso('Não foi possível salvar os dados. ' + err.message);
-      setModalAviso(true);
-    } finally {
-      setLoading(false);
-    }
+  const payload = { 
+    categoria, 
+    horarioInicio, 
+    horarioFim, 
+    materias: materiasSelecionadas 
   };
+
+  try {
+    const response = await fetch('http://172.20.10.3:5000', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) throw new Error(`Erro ao enviar: ${response.status}`);
+
+    const data = await response.json();
+    console.log('Resposta da API:', data);
+
+    setModalSucesso(true);
+
+    setTimeout(() => {
+      router.back();
+    }, 100);
+
+  } catch (err: any) {
+    console.error('Erro no fetch:', err);
+    setMensagemAviso('Não foi possível salvar os dados. ' + err.message);
+    setModalAviso(true);
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <ImageBackground source={require('../../assets/images/ssa.png')} style={styles.background}>
@@ -236,6 +247,7 @@ export default function SSA() {
                 if (!selectedDate) return;
                 const h = selectedDate.getHours().toString().padStart(2,'0');
                 const m = selectedDate.getMinutes().toString().padStart(2,'0');
+                // eslint-disable-next-line no-unused-expressions
                 showTimePicker === 'inicio' ? setHorarioInicio(`${h}:${m}`) : setHorarioFim(`${h}:${m}`);
               }}
             />

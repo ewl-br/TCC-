@@ -1,0 +1,125 @@
+from flask import Flask
+from flask_cors import CORS
+import mysql.connector
+import graphene
+from flask_graphql import GraphQLView
+from openai import OpenAI
+from key import API_KEY
+import json
+
+# Flask
+app = Flask(__name__)
+CORS(app)
+
+# Conexão com MySQL
+conexao_BD = {
+    "host": "localhost",
+    "user": "root",
+    "password": "kkcobens",
+    "database": "estudamais"
+}
+
+# Cliente OpenAI
+client = OpenAI(api_key=API_KEY)
+
+# ---------------- IA ---------------- #
+def gerar_plano_com_ia(materias, prova):
+    prompt = f"""
+    Estou criando um plano de estudos para {prova}.
+    O usuário escolheu as matérias: {', '.join(materias)}.
+    Gere um JSON com:
+    - "plano_de_estudo": lista de horários
+    - "assuntos_sugeridos": dicionário de temas e tópicos
+    """
+    try:
+        response = client.chat.completions.create(
+            model="gpt-5",
+            messages=[
+                {"role": "system", "content": f"Você é uma assistente pedagógica especialista em {prova}."},
+                {"role": "user", "content": prompt}
+            ],
+            response_format={"type": "json_object"}  
+        )
+        conteudo = response.choices[0].message.content
+        return json.loads(conteudo)
+    except Exception as e:
+        return {"erro": str(e)}
+
+# ---------------- GraphQL Schema ---------------- #
+class MateriaType(graphene.ObjectType):
+    id = graphene.Int()
+    nome = graphene.String()
+    professor = graphene.String()
+    descricao = graphene.String()
+
+class PlanoType(graphene.ObjectType):
+    plano_de_estudo = graphene.List(graphene.String)
+    assuntos_sugeridos = graphene.JSONString()
+
+# Queries
+class Query(graphene.ObjectType):
+    # Listar matérias
+    materias = graphene.List(MateriaType)
+
+    def resolve_materias(self, info):
+        conn = mysql.connector.connect(**conexao_BD)
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM materias")
+        materias = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        return materias
+
+    # Gerar plano com IA (ex: ENEM)
+    plano_estudo = graphene.Field(
+        PlanoType,
+        materias=graphene.List(graphene.String, required=True),
+        prova=graphene.String(required=True)
+    )
+
+    def resolve_plano_estudo(self, info, materias, prova):
+        return gerar_plano_com_ia(materias, prova)
+
+# Mutations
+class AdicionarMateria(graphene.Mutation):
+    class Arguments:
+        nome = graphene.String(required=True)
+        professor = graphene.String(required=True)
+        descricao = graphene.String(required=True)
+
+    ok = graphene.Boolean()
+    materia = graphene.Field(lambda: MateriaType)
+
+    def mutate(self, info, nome, professor, descricao):
+        conn = mysql.connector.connect(**conexao_BD)
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO materias (nome, professor, descricao) VALUES (%s,%s,%s)",
+            (nome, professor, descricao)
+        )
+        conn.commit()
+        new_id = cursor.lastrowid
+        cursor.close()
+        conn.close()
+
+        materia = {"id": new_id, "nome": nome, "professor": professor, "descricao": descricao}
+        return AdicionarMateria(ok=True, materia=materia)
+
+class Mutation(graphene.ObjectType):
+    adicionar_materia = AdicionarMateria.Field()
+
+# Schema GraphQL
+schema = graphene.Schema(query=Query, mutation=Mutation)
+
+# Rota GraphQL
+app.add_url_rule(
+    "/graphql",
+    view_func=GraphQLView.as_view("graphql", schema=schema, graphiql=True)
+)
+
+@app.route("/")
+def home():
+    return "API funcionando. Vá para /graphql para usar GraphQL."
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000, debug=True)

@@ -1,0 +1,115 @@
+import strawberry
+from flask import Flask
+from strawberry.flask.views import GraphQLView
+from typing import List
+import json
+from openai import OpenAI
+from key import API_KEY  # sua chave OpenAI
+
+# ====================================================
+# 🔹 Conexão com OpenAI
+# ====================================================
+client = OpenAI(api_key=API_KEY)
+
+def gerar_plano_com_ia(materias: List[str], prova: str):
+    """
+    Chama a OpenAI para gerar um plano de estudos em JSON.
+    """
+    prompt = f"""
+    Você é uma assistente pedagógica especialista em {prova}.
+    Gere um plano de estudos para as matérias: {', '.join(materias)}.
+    Retorne no formato JSON:
+    {{
+      "plano_de_estudo": [
+        "Segunda 8h-10h História",
+        "Terça 8h-10h Geografia"
+      ],
+      "assuntos_sugeridos": {{
+        "História": ["Tópico 1", "Tópico 2"],
+        "Geografia": ["Tópico A", "Tópico B"]
+      }}
+    }}
+    """
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-5",
+            messages=[
+                {"role": "system", "content": "Você é uma assistente pedagógica."},
+                {"role": "user", "content": prompt}
+            ]
+        )
+        conteudo = response.choices[0].message.content
+        return json.loads(conteudo)  # converte JSON da IA para dict
+    except Exception as e:
+        return {
+            "plano_de_estudo": [],
+            "assuntos_sugeridos": {},
+            "erro": f"Falha ao gerar plano: {str(e)}"
+        }
+
+# ====================================================
+# 🔹 Tipos GraphQL
+# ====================================================
+@strawberry.type
+class Assunto:
+    tema: str
+    topicos: List[str]
+
+@strawberry.type
+class PlanoEstudo:
+    plano_de_estudo: List[str]
+    assuntos_sugeridos: List[Assunto]
+
+# ====================================================
+# 🔹 Query principal
+# ====================================================
+@strawberry.type
+class Query:
+    @strawberry.field
+    def hello(self) -> str:
+        return "API GraphQL funcionando 🚀"
+
+    @strawberry.field
+    def gerar_plano(self, materias: List[str], prova: str) -> PlanoEstudo:
+        """
+        Gera plano de estudos usando GPT-5 para qualquer prova.
+        prova: ENEM, SSA1, SSA2, SSA3, Avaliação Escolar
+        """
+        resposta = gerar_plano_com_ia(materias, prova)
+
+        assuntos = []
+        for tema, lista in resposta.get("assuntos_sugeridos", {}).items():
+            assuntos.append(Assunto(tema=tema, topicos=lista))
+
+        return PlanoEstudo(
+            plano_de_estudo=resposta.get("plano_de_estudo", []),
+            assuntos_sugeridos=assuntos
+        )
+
+# ====================================================
+# 🔹 Configuração Flask + GraphQL
+# ====================================================
+schema = strawberry.Schema(query=Query)
+app = Flask(__name__)
+
+# Rota GraphQL
+app.add_url_rule(
+    "/graphql",
+    view_func=GraphQLView.as_view(
+        "graphql_view",
+        schema=schema,
+        graphiql=True
+    ),
+)
+
+# Rota simples para teste
+@app.route("/")
+def home():
+    return "API Flask funcionando! Acesse /graphql para GraphQL."
+
+# ====================================================
+# 🔹 Inicialização do servidor
+# ====================================================
+if __name__ == "__main__":
+    app.run(host="127.0.0.1", port=5000, debug=True)
